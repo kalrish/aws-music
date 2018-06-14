@@ -1,0 +1,19 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - aws s3 cp --recursive "s3://${SOURCE_BUCKET}" codebuild/build
+         - mv -ft codebuild/build -- tup/*
+         - cd codebuild/build
+         - mkdir build
+         - aws --query 'Parameter.Value' --output text ssm get-parameter --name "/music/profiles/${PROFILE}/config" >build/tup.config
+         - tup build
+         - rm -- build/tup.config
+
+artifacts:
+   base-directory: codebuild/build/build
+   files:
+      - '**/*'
+   discard-paths: no
