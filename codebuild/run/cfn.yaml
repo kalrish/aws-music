@@ -154,7 +154,7 @@ Resources:
             Type: GITHUB
             Location: 'https://github.com/kalrish/aws-music.git'
             GitCloneDepth: 1
-            BuildSpec: 'codebuild/buildspec-run.yaml'
+            BuildSpec: 'codebuild/run/buildspec.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: !Ref BuildComputeType
