@@ -4,7 +4,7 @@ version: 0.2
 phases:
    build:
       commands:
-         - aws s3 cp --recursive "s3://${SOURCE_BUCKET}" codebuild/build
+         - aws s3 cp --quiet --recursive "s3://${SOURCE_BUCKET}" codebuild/build
          - mv -ft codebuild/build -- tup/*
          - cd codebuild/build
          - mkdir build
