@@ -1,0 +1,15 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - if test ! -f 'codebuild/get-pip.py' ; then curl -sS -o 'codebuild/get-pip.py' 'https://bootstrap.pypa.io/get-pip.py' ; fi
+         - docker build -t music-env:latest codebuild
+         - docker tag music-env "${REPOSITORY}"
+         - $(aws ecr get-login --no-include-email)
+         - docker push "${REPOSITORY}"
+
+cache:
+   paths:
+      - 'codebuild/get-pip.py'
