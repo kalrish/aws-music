@@ -138,6 +138,12 @@ Resources:
                   Resource: !Join [ '/', [ !GetAtt ArtifactsBucket.Arn, '*' ] ]
                   Principal:
                      AWS: !GetAtt BuildRole.Arn
+   ArtifactsParameter:
+      Type: 'AWS::SSM::Parameter'
+      Properties:
+         Name: !Sub '/music/profiles/${Profile}/artifacts'
+         Type: String
+         Value: !Ref ArtifactsBucket
    BuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
