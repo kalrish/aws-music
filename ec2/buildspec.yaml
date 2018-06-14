@@ -1,0 +1,17 @@
+---
+version: 0.2
+
+env:
+   parameter-store:
+      SSH_KEY: '/csgo/ssh-key'
+
+phases:
+   build:
+      commands:
+         - echo "${SSH_KEY}" >ssh.key
+         - echo chmod 0600 ssh.key
+         - packer build -color=false template.json
+
+cache:
+   paths:
+      - steamcmd-installer.sh
