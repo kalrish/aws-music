@@ -37,7 +37,7 @@ Resources:
                         Action:
                            - 's3:GetObject'
                            - 's3:PutObject'
-                        Resource: !Join [ '/', [ !GetAtt CacheBucket.Arn, '*' ] ]
+                        Resource: !Sub '${CacheBucket.Arn}/*'
                         Effect: Allow
    BuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
@@ -51,7 +51,7 @@ Resources:
                      - 'logs:CreateLogGroup'
                      - 'logs:CreateLogStream'
                      - 'logs:PutLogEvents'
-                  Resource: !Join [ '', [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/codebuild/', !Ref BuildProject , ':*' ] ]
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${BuildProject}:*'
                   Effect: Allow
          Roles:
             - !Ref BuildRole
@@ -98,7 +98,7 @@ Resources:
                   Action:
                      - 's3:GetObject'
                      - 's3:PutObject'
-                  Resource: !Join [ '/', [ !GetAtt CacheBucket.Arn, '*' ] ]
+                  Resource: !Sub '${CacheBucket.Arn}/*'
                   Principal:
                      AWS: !GetAtt BuildRole.Arn
    BuildProject:
