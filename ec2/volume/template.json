@@ -12,19 +12,7 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"inline": [
-				"python --version"
-			]
-		},
-		{
-			"type": "ansible",
-			"playbook_file": "playbook.yaml",
-			"user": "{{ user `ssh_user` }}",
-			"extra_arguments": [
-				"-vvv",
-				"--extra-vars",
-				"source_bucket={{ user `source_bucket` }}"
-			]
+			"script": "provision.sh"
 		}
 	],
 	"builders": [
