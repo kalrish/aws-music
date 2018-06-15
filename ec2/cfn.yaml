@@ -145,6 +145,21 @@ Resources:
          AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
          CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
          VpcId: !Ref Vpc
+   PrivateRouteTable:
+      Type: 'AWS::EC2::RouteTable'
+      Properties:
+         VpcId: !Ref Vpc
+   NatRoute:
+      Type: 'AWS::EC2::Route'
+      Properties:
+         RouteTableId: !Ref PrivateRouteTable
+         InstanceId: !Ref NatInstance
+         DestinationCidrBlock: 0.0.0.0/0
+   PrivateRouteTableAssociation:
+      Type: 'AWS::EC2::SubnetRouteTableAssociation'
+      Properties:
+         RouteTableId: !Ref PrivateRouteTable
+         SubnetId: !Ref PrivateSubnet
    VolumeBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -192,18 +207,32 @@ Resources:
                   Statement:
                      -
                         Action:
-                           - 'ec2:DescribeSubnets'
+                           - 'ec2:CreateNetworkInterface'
+                           - 'ec2:DeleteNetworkInterface'
+                           - 'ec2:DescribeDhcpOptions'
+                           - 'ec2:DescribeNetworkInterfaces'
                            - 'ec2:DescribeSecurityGroups'
+                           - 'ec2:DescribeSubnets'
+                           - 'ec2:DescribeVpcs'
                         Resource: '*'
                         Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateNetworkInterfacePermission'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                        Condition:
+                           StringEquals:
+                              ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                              ec2:AuthorizedService: 'codebuild.amazonaws.com'
+                        Effect: Allow
             -
-               PolicyName: ec2-volume-create
+               PolicyName: packer-amazon-ebsvolume
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
                         Action:
-                           - 'ec2:*'
+                           - 'ec2:DescribeSecurityGroups'
                         Resource: '*'
                         Effect: Allow
    VolumeBuildLogsPolicy:
@@ -264,6 +293,7 @@ Resources:
             Subnets:
                - !Ref PrivateSubnet
             SecurityGroupIds:
+               - !GetAtt NatSecurityGroup.GroupId
                - !GetAtt VolumeBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS

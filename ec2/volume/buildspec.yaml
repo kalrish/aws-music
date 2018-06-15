@@ -1,14 +1,8 @@
 ---
 version: 0.2
 
-env:
-   parameter-store:
-      SSH_KEY: '/music/ssh-key'
-
 phases:
    build:
       commands:
-         - echo "${SSH_KEY}" >music.pem
-         - chmod 0600 music.pem
          - echo curl -sS -o ec2/worker/ansible/files/get-pip.py 'https://bootstrap.pypa.io/get-pip.py'
          - packer build -color=false ec2/volume/template.json
