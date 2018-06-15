@@ -24,7 +24,6 @@
 	],
 	"builders": [
 		{
-			"ami_virtualization_type": "hvm",
 			"associate_public_ip_address": false,
 			"availability_zone": "{{ user `availability_zone` }}",
 			"instance_type": "{{ user `instance_type` }}",
