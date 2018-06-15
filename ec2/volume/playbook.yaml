@@ -2,22 +2,30 @@
 - name: Provision AMI
   hosts: all
   tasks:
-     - name: Upgrade installed packages
-       yum:
-          update_cache: yes
-          upgrade: dist
-     - name: Install required packages
-       yum:
-          name: '{{ item }}'
-       with_items:
-          - ext4-tools
-     - name: Install pip
-       script: get-pip.py
-     - name: Install AWS CLI
-       pip:
-          name: awscli
+     #- name: Upgrade installed packages
+     #  yum:
+     #     update_cache: yes
+     #     upgrade: dist
+     #- name: Install required packages
+     #  yum:
+     #     name: '{{ item }}'
+     #  with_items:
+     #     - ext4-tools
+     #- name: Install pip
+     #  script: get-pip.py
+     #- name: Install AWS CLI
+     #  pip:
+     #     name: awscli
      - name: Format EBS volume
+       filesystem:
+          dev: /dev/lalala
+          fstype: '{{ FSTYPE }}'
      - name: Mount EBS volume
+       mount:
+          state: mounted
+          fstype: '{{ FSTYPE }}'
+          path: /mnt/music
+          boot: no
      #- name: List music sources
      #  aws_s3:
      #     bucket: SOURCE_BUCKET
@@ -31,4 +39,8 @@
      #     dest: '/mnt/volume/{{ item }}'
      #  with_items: '{{ music_sources.s3_keys }}'
      - name: Download music sources
-       command: 'aws s3 cp --quiet s3://{{ SOURCE_BUCKET }} /mnt/volume'
+       command: 'aws s3 cp --quiet s3://{{ SOURCE_BUCKET }} /mnt/music'
+     - name: Unmount EBS volume
+       mount:
+          state: unmounted
+          path: /mnt/music
