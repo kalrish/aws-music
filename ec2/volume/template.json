@@ -1,17 +1,19 @@
 {
 	"variables": {
+		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
 		"instance_type": "t2.micro",
 		"region": "{{ env `AWS_REGION` }}",
-		"security_group_id": "{{ env `SECURITY_GROUP_INSTANCE` }}",
+		"security_group_id": "{{ env `INSTANCE_SECURITY_GROUP` }}",
 		"ssh_user": "ec2-user",
-		"subnet_id": "{{ env `SUBNET` }}",
-		"vpc_id": "{{ env `VPC` }}"
+		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
+		"vpc_id": "{{ env `INSTANCE_VPC` }}"
 	},
 	"provisioners": [
 		{
 			"type": "shell",
 			"inline": [
-				"apt-get -qq update && apt-get -qq install python-minimal"
+				"echo hi",
+				"sudo echo oh"
 			]
 		},
 		{
@@ -24,6 +26,7 @@
 		{
 			"ami_virtualization_type": "hvm",
 			"associate_public_ip_address": false,
+			"availability_zone": "{{ user `availability_zone` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"security_group_id": "{{ user `security_group_id` }}",

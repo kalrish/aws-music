@@ -24,6 +24,10 @@ Parameters:
       Description: 'AMI ID to base the bridge instance on.'
       Type: String
       AllowedPattern: '^ami-[a-z0-9]+$'
+   EbsVolumeSize:
+      Description: 'Size of the EBS volume used to compile the collection.'
+      Type: String
+      AllowedPattern: '\d+'
 Conditions:
    EnableIpv6: !Equals [ !Ref EnableIpv6 , 'yes' ]
 Resources:
@@ -145,18 +149,18 @@ Resources:
          AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
          CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
          VpcId: !Ref Vpc
-   VolumeBuildContainerSecurityGroup:
+   AmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music volume build container.'
+         GroupDescription: 'Music AMI build container.'
          VpcId: !Ref Vpc
-   VolumeBuildInstanceSecurityGroup:
+   AmiBuildInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music volume build instance.'
+         GroupDescription: 'Music AMI build instance.'
          SecurityGroupIngress:
             -
-               SourceSecurityGroupId: !GetAtt VolumeBuildContainerSecurityGroup.GroupId
+               SourceSecurityGroupId: !GetAtt AmiBuildContainerSecurityGroup.GroupId
                FromPort: 22
                ToPort: 22
                IpProtocol: tcp
@@ -218,7 +222,7 @@ Resources:
                      - 'logs:CreateLogGroup'
                      - 'logs:CreateLogStream'
                      - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolumeBuildProject}:*'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AmiBuildProject}:*'
                   Effect: Allow
          Roles:
             - !Ref VolumeBuildRole
@@ -240,49 +244,21 @@ Resources:
             PrivilegedMode: false
             EnvironmentVariables:
                -
-                  Name: INSTANCE_VPC
-                  Type: PLAINTEXT
-                  Value: !Ref Vpc
-               -
-                  Name: INSTANCE_SUBNET
-                  Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
-               -
                   Name: INSTANCE_SECURITY_GROUP
                   Type: PLAINTEXT
-                  Value: !GetAtt VolumeBuildInstanceSecurityGroup.GroupId
+                  Value: !GetAtt AmiBuildInstanceSecurityGroup.GroupId
                -
                   Name: SOURCE_BUCKET
                   Type: PLAINTEXT
                   Value: !ImportValue music-SourceBucket
-               -
-                  Name: AVAILABILITY_ZONE
-                  Type: PLAINTEXT
-                  Value: !Ref AvailabilityZone
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref PrivateSubnet
             SecurityGroupIds:
-               - !GetAtt VolumeBuildContainerSecurityGroup.GroupId
+               - !GetAtt AmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
-   AmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'Music AMI build container.'
-         VpcId: !Ref Vpc
-   AmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'Music AMI build instance.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt AmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
    AmiBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -384,3 +360,9 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
+   BuildVolume:
+      Type: 'AWS::EC2::Volume'
+      Properties:
+         AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
+         Size: !Ref EbsVolumeSize
+
