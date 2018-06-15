@@ -1,6 +1,7 @@
 ---
 - name: Provision AMI
   hosts: all
+  gather_facts: false
   tasks:
      #- name: Upgrade installed packages
      #  yum:
