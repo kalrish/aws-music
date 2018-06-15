@@ -3,7 +3,7 @@ version: 0.2
 
 env:
    parameter-store:
-      SSH_KEY: '/music/ec2/ssh-key'
+      SSH_KEY: '/music/ssh-key'
 
 phases:
    build:
