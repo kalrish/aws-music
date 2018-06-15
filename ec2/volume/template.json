@@ -1,7 +1,7 @@
 {
 	"variables": {
 		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
-		"instance_type": "t2.micro",
+		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_id": "{{ env `INSTANCE_SECURITY_GROUP` }}",
 		"ssh_user": "ec2-user",
