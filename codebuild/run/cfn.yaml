@@ -99,12 +99,6 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref BuildRole
-   ConfigParameter:
-      Type: 'AWS::SSM::Parameter'
-      Properties:
-         Name: !Sub '/music/profiles/${Profile}/config'
-         Type: String
-         Value: "\n"
    CacheBucket:
       Type: 'AWS::S3::Bucket'
    CacheBucketPolicy:
