@@ -42,7 +42,7 @@
 			},
 			"ssh_interface": "private_ip",
 			"ssh_keypair_name": "music-packer",
-			"ssh_private_key_file": "ec2/music-packer.pem",
+			"ssh_private_key_file": "../music-packer.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
 			"subnet_id": "{{ user `subnet_id` }}",
 			"type": "amazon-ebsvolume",

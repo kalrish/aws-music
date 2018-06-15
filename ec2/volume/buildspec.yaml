@@ -5,4 +5,5 @@ phases:
    build:
       commands:
          - echo curl -sS -o ec2/worker/ansible/files/get-pip.py 'https://bootstrap.pypa.io/get-pip.py'
-         - packer build -color=false ec2/volume/template.json
+         - cd ec2/volume
+         - packer build -color=false template.json
