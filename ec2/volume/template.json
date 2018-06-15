@@ -12,8 +12,7 @@
 		{
 			"type": "shell",
 			"inline": [
-				"echo hi",
-				"sudo echo oh"
+				"python --version"
 			]
 		},
 		{
@@ -24,6 +23,7 @@
 	],
 	"builders": [
 		{
+			"type": "amazon-ebsvolume",
 			"associate_public_ip_address": false,
 			"availability_zone": "{{ user `region` }}{{ user `availability_zone` }}",
 			"instance_type": "{{ user `instance_type` }}",
@@ -48,7 +48,6 @@
 			"ssh_private_key_file": "../music-packer.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
 			"subnet_id": "{{ user `subnet_id` }}",
-			"type": "amazon-ebsvolume",
 			"vpc_id": "{{ user `vpc_id` }}"
 		}
 	]

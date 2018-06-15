@@ -266,6 +266,12 @@ Resources:
                         Effect: Allow
                      -
                         Action:
+                           - 'ec2:DescribeInstances'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
                            - 'ec2:StopInstances'
                            - 'ec2:TerminateInstances'
                         Resource:
