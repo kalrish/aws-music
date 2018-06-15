@@ -2,6 +2,9 @@
 - name: Provision AMI
   hosts: all
   gather_facts: false
+  vars:
+     dev: /dev/xvdf
+     fstype: ext4
   tasks:
      #- name: Upgrade installed packages
      #  yum:
@@ -19,12 +22,13 @@
      #     name: awscli
      - name: Format EBS volume
        filesystem:
-          dev: /dev/lalala
-          fstype: '{{ FSTYPE }}'
+          dev: '{{ dev }}'
+          fstype: '{{ fstype }}'
      - name: Mount EBS volume
        mount:
           state: mounted
-          fstype: '{{ FSTYPE }}'
+          src: '{{ dev }}'
+          fstype: '{{ fstype }}'
           path: /mnt/music
           boot: no
      #- name: List music sources
@@ -40,7 +44,7 @@
      #     dest: '/mnt/volume/{{ item }}'
      #  with_items: '{{ music_sources.s3_keys }}'
      - name: Download music sources
-       command: 'aws s3 cp --quiet s3://{{ SOURCE_BUCKET }} /mnt/music'
+       command: 'aws s3 cp --quiet s3://{{ source_bucket }} /mnt/music'
      - name: Unmount EBS volume
        mount:
           state: unmounted
