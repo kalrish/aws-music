@@ -21,7 +21,7 @@
 			"playbook_file": "playbook.yaml",
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-v",
+				"-vvv",
 				"--extra-vars",
 				"source_bucket={{ user `source_bucket` }}"
 			]
