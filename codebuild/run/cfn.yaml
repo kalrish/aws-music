@@ -148,7 +148,7 @@ Resources:
       Type: 'AWS::CodeBuild::Project'
       Properties:
          Name: !Sub 'music-run-${Profile}'
-         Description: !Sub 'Compile music collections after the ${Profile} profile.'
+         Description: !Sub 'Compile music collection after the ${Profile} profile.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
             Type: GITHUB
