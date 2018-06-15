@@ -28,6 +28,9 @@
 			"availability_zone": "{{ user `region` }}{{ user `availability_zone` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
+			"run_tags": {
+				"Packer": "music-volume"
+			},
 			"security_group_id": "{{ user `security_group_id` }}",
 			"source_ami_filter": {
 				"filters": {

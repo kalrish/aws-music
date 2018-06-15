@@ -232,8 +232,22 @@ Resources:
                   Statement:
                      -
                         Action:
-                           - 'ec2:DescribeSecurityGroups'
+                           - 'ec2:DescribeImages'
                         Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'music-volume'
                         Effect: Allow
    VolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
