@@ -1,0 +1,13 @@
+---
+- name: Provision AMI
+  hosts: all
+  tasks:
+     - name: Run dist-upgrade
+       apt:
+          update_cache: yes
+          upgrade: dist
+     - name: Install required packages
+       apt:
+          name: '{{ item }}'
+       with_items:
+          - rsync

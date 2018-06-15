@@ -3,15 +3,11 @@ version: 0.2
 
 env:
    parameter-store:
-      SSH_KEY: '/csgo/ssh-key'
+      SSH_KEY: '/music/ec2/ssh-key'
 
 phases:
    build:
       commands:
          - echo "${SSH_KEY}" >ssh.key
          - echo chmod 0600 ssh.key
-         - packer build -color=false template.json
-
-cache:
-   paths:
-      - steamcmd-installer.sh
+         - packer build -color=false ec2/server/template.json
