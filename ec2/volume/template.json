@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
+		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_id": "{{ env `INSTANCE_SECURITY_GROUP` }}",
@@ -28,6 +29,7 @@
 					"volume_type": "gp2"
 				}
 			],
+			"iam_instance_profile": "{{ user `instance_profile` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
