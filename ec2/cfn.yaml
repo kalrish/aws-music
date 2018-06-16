@@ -183,7 +183,8 @@ Resources:
       Properties:
          Name: !Sub '/music/volume'
          Type: String
-         Value: ' '
+         AllowedPattern: 'vol-[a-z0-9]+'
+         Value: 'vol-invalid'
    VolumeBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -302,7 +303,7 @@ Resources:
                      -
                         Action:
                            - 'ssm:PutParameter'
-                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${VolumeParameter}'
+                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${VolumeParameter}'
                         Effect: Allow
    VolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
