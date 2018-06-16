@@ -54,5 +54,12 @@
 			"subnet_id": "{{ user `subnet_id` }}",
 			"vpc_id": "{{ user `vpc_id` }}"
 		}
+	],
+	"post-processors": [
+		{
+			"type": "manifest",
+			"output": "manifest.json",
+			"strip_path": true
+		}
 	]
 }
