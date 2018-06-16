@@ -25,10 +25,13 @@
      owner: music
      group: music
      mode: u=rw,g=r
+- name: Determine systemd mount unit name
+  command: 'systemd-escape --path {{ mount_point }}'
+  register: mount_unit_name
 - name: Upload systemd mount unit
   template:
      src: 'music.mount.j2'
-     dest: "/etc/systemd/system/{{ mount_point | replace('/','-') | regex_replace('^\\/|\\/$','') }}"
+     dest: "/etc/systemd/system/{{ mount_unit_name }}"
      owner: root
      group: root
      mode: u=rw,g=r,o=r

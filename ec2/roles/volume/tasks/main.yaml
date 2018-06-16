@@ -10,12 +10,12 @@
 - name: Format EBS volume
   filesystem:
      dev: '{{ dev }}'
-     fstype: '{{ fstype }}'
+     fstype: '{{ fs_type }}'
 - name: Mount EBS volume
   mount:
      state: mounted
      src: '{{ dev }}'
-     fstype: '{{ fstype }}'
+     fstype: '{{ fs_type }}'
      path: '{{ mount_point }}'
      boot: no
 - name: Initialize tup database

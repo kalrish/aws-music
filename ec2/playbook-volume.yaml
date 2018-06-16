@@ -1,10 +1,6 @@
 ---
 - name: Prepare working volume
   hosts: all
-  vars:
-     dev: /dev/xvdf
-     fstype: ext4
-     mount_point: /mnt/music
   roles:
      - usergroup
      - volume

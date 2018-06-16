@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
+		"device_name": "/dev/xvdf",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
@@ -21,7 +22,9 @@
 			"playbook_file": "playbook-volume.yaml",
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-vvv"
+				"-vvv",
+				"--extra-vars",
+				"dev={{ user `device_name` }}"
 			]
 		}
 	],
@@ -33,7 +36,7 @@
 			"ebs_volumes": [
 				{
 					"delete_on_termination": false,
-					"device_name": "/dev/xvdf",
+					"device_name": "{{ user `device_name` }}",
 					"volume_size": 1,
 					"volume_type": "gp2"
 				}
