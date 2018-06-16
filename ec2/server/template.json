@@ -17,7 +17,10 @@
 		{
 			"type": "ansible",
 			"playbook_file": "playbook.yaml",
-			"user": "{{ user `ssh_user` }}"
+			"user": "{{ user `ssh_user` }}",
+			"extra_arguments": [
+				"-vvvv"
+			]
 		}
 	],
 	"builders": [

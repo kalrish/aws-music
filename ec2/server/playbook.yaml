@@ -3,8 +3,6 @@
   hosts: all
   gather_facts: false
   tasks:
-     - name: lala
-       command: echo hi
      - name: Update system and install required packages
        pacman:
           name: '{{ item }}'
