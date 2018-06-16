@@ -2,6 +2,10 @@
 version: 0.2
 
 phases:
+   install:
+      commands:
+         - DEBIAN_FRONTEND=noninteractive apt-get -qq update
+         - DEBIAN_FRONTEND=noninteractive apt-get -qq install openssh-server
    build:
       commands:
          - cd ec2/server
