@@ -31,7 +31,7 @@
 - name: Upload systemd mount unit
   template:
      src: 'music.mount.j2'
-     dest: "/etc/systemd/system/{{ mount_unit_name }}"
+     dest: '/etc/systemd/system/{{ mount_unit_name.stdout }}.mount'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
