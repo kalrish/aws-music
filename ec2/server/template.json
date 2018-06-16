@@ -24,6 +24,7 @@
 	"builders": [
 		{
 			"type": "amazon-ebs",
+			"ami_name": "music-server {{ isotime \"2006-01-02-15-04-05\" }}",
 			"associate_public_ip_address": false,
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
