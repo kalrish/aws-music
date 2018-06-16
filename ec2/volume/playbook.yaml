@@ -44,7 +44,7 @@
      #     dest: '/mnt/volume/{{ item }}'
      #  with_items: '{{ music_sources.s3_keys }}'
      - name: Download music sources
-       command: 'aws s3 cp --quiet s3://{{ source_bucket }} /mnt/music'
+       command: 'aws s3 cp --quiet --recursive s3://{{ source_bucket }} /mnt/music'
      - name: Unmount EBS volume
        mount:
           state: unmounted
