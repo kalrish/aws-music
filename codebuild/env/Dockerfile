@@ -1,4 +1,4 @@
-FROM base/archlinux
+FROM archlinux/base
 
 RUN pacman --noconfirm -Syu flac lame python tup && pacman --noconfirm -Sc
 
