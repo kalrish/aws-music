@@ -11,8 +11,7 @@
 		{
 			"type": "shell",
 			"inline": [
-				"pacman --color never --noconfirm -Sy python",
-				"sleep 50"
+				"pacman --color never --noprogressbar --noconfirm -Sqy python"
 			]
 		},
 		{

@@ -548,11 +548,6 @@ Resources:
                FromPort: 22
                ToPort: 22
                IpProtocol: tcp
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: '-1'
-               ToPort: '-1'
-               IpProtocol: '-1'
          VpcId: !Ref Vpc
    ServerAmiBuildRole:
       Type: 'AWS::IAM::Role'
