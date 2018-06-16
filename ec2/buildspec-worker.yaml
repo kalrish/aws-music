@@ -3,12 +3,15 @@ version: 0.2
 
 env:
    parameter-store:
-      SSH_KEY: '/music/ec2/ssh-key'
+      SSH_KEY: '/music/ec2/keys/packer'
 
 phases:
    build:
       commands:
-         - echo "${SSH_KEY}" >ssh.key
-         - echo chmod 0600 ssh.key
-         - curl -sS -o ec2/worker/ansible/files/get-pip.py 'https://bootstrap.pypa.io/get-pip.py'
-         - packer build -color=false ec2/worker/template.json
+         - cd ec2
+         - echo "${SSH_KEY}" >music-packer.pem
+         - echo chmod 0600 music-packer.pem
+         - curl -sS -o 'roles/worker/files/get-pip.py' 'https://bootstrap.pypa.io/get-pip.py'
+         - packer build -color=false template-worker.json
+         - |
+             aws ec2 create-launch-template --launch-template-name music-server --type String --value "$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)"

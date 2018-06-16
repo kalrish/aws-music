@@ -25,3 +25,21 @@
      owner: music
      group: music
      mode: u=rw,g=r
+- name: Upload systemd mount unit
+  template:
+     src: 'music.mount.j2'
+     dest: "/etc/systemd/system/{{ mount_point | replace('/','-') | regex_replace('^\\/|\\/$','') }}"
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
+- name: Upload systemd service unit
+  template:
+     src: 'music.service.j2'
+     dest: '/etc/systemd/system/music.service'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
+- name: Enable tup monitor service
+  systemd:
+     name: music
+     state: enabled

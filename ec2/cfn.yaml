@@ -725,7 +725,9 @@ Resources:
       Properties:
          LaunchTemplateName: music-worker
          LaunchTemplateData:
-            IamInstanceProfile: !Ref WorkerInstanceProfile
+            IamInstanceProfile:
+               Arn: !GetAtt WorkerInstanceProfile.Arn
+               Name: !Ref WorkerInstanceProfile
             KeyName: music-worker
             SecurityGroupIds:
                - !GetAtt BridgeSecurityGroup.GroupId
