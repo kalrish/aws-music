@@ -1,0 +1,52 @@
+{
+	"variables": {
+		"instance_type": "t2.nano",
+		"region": "{{ env `AWS_REGION` }}",
+		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
+		"ssh_user": "ec2-user",
+		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
+		"vpc_id": "{{ env `INSTANCE_VPC` }}"
+	},
+	"provisioners": [
+		{
+			"type": "shell",
+			"script": "provision.sh"
+		}
+	],
+	"builders": [
+		{
+			"type": "amazon-ebs",
+			"associate_public_ip_address": false,
+			"instance_type": "{{ user `instance_type` }}",
+			"region": "{{ user `region` }}",
+			"run_tags": {
+				"Packer": "music-server"
+			},
+			"security_group_ids": "{{ user `security_group_ids` }}",
+			"source_ami_filter": {
+				"filters": {
+					"name": "arch-linux-hvm-*.x86_64-ebs",
+					"root-device-type": "ebs",
+					"virtualization-type": "hvm"
+				},
+				"owners": [
+					"093273469852"
+				],
+				"most_recent": true
+			},
+			"ssh_interface": "private_ip",
+			"ssh_keypair_name": "music-packer",
+			"ssh_private_key_file": "../music-packer.pem",
+			"ssh_username": "{{ user `ssh_user` }}",
+			"subnet_id": "{{ user `subnet_id` }}",
+			"vpc_id": "{{ user `vpc_id` }}"
+		}
+	],
+	"post-processors": [
+		{
+			"type": "manifest",
+			"output": "manifest.json",
+			"strip_path": true
+		}
+	]
+}

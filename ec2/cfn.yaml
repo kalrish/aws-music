@@ -198,7 +198,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: ecr-pull
+               PolicyName: environment
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -210,32 +210,7 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: ec2-codebuild
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:CreateNetworkInterface'
-                           - 'ec2:DeleteNetworkInterface'
-                           - 'ec2:DescribeDhcpOptions'
-                           - 'ec2:DescribeNetworkInterfaces'
-                           - 'ec2:DescribeSecurityGroups'
-                           - 'ec2:DescribeSubnets'
-                           - 'ec2:DescribeVpcs'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateNetworkInterfacePermission'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                        Condition:
-                           StringEquals:
-                              ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                              ec2:AuthorizedService: 'codebuild.amazonaws.com'
-                        Effect: Allow
-            -
-               PolicyName: packer-amazon-ebsvolume
+               PolicyName: packer
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -296,7 +271,7 @@ Resources:
                               ec2:ResourceTag/Packer: 'music-volume'
                         Effect: Allow
             -
-               PolicyName: parameter-set
+               PolicyName: parameter
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -334,7 +309,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: s3-source
+               PolicyName: sources
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -403,23 +378,23 @@ Resources:
                - !GetAtt VolumeBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
-   AmiBuildContainerSecurityGroup:
+   WorkerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
          GroupDescription: 'Music AMI build container.'
          VpcId: !Ref Vpc
-   AmiBuildInstanceSecurityGroup:
+   WorkerAmiBuildInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
          GroupDescription: 'Music AMI build instance.'
          SecurityGroupIngress:
             -
-               SourceSecurityGroupId: !GetAtt AmiBuildContainerSecurityGroup.GroupId
+               SourceSecurityGroupId: !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
                FromPort: 22
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
-   AmiBuildRole:
+   WorkerAmiBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
          AssumeRolePolicyDocument:
@@ -432,18 +407,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: ec2-codebuild
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeSubnets'
-                           - 'ec2:DescribeSecurityGroups'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: ecr-pull
+               PolicyName: environment
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -455,16 +419,67 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: ec2-ami-create
+               PolicyName: packer
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
                         Action:
-                           - 'ec2:*'
+                           - 'ec2:DescribeImages'
                         Resource: '*'
                         Effect: Allow
-   AmiBuildLogsPolicy:
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'music-volume'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateTags'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'iam:PassRole'
+                        Resource:
+                           - !GetAtt VolumeBuildInstanceRole.Arn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeInstances'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'music-volume'
+                        Effect: Allow
+   WorkerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
          PolicyName: logs
@@ -476,21 +491,21 @@ Resources:
                      - 'logs:CreateLogGroup'
                      - 'logs:CreateLogStream'
                      - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AmiBuildProject}:*'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${WorkerAmiBuildProject}:*'
                   Effect: Allow
          Roles:
-            - !Ref AmiBuildRole
-   AmiBuildProject:
+            - !Ref WorkerAmiBuildRole
+   WorkerAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: music-ami
-         Description: 'Build AMI to host Counter Strike: Global Offensive server.'
-         ServiceRole: !GetAtt AmiBuildRole.Arn
+         Name: music-worker-ami
+         Description: 'Build AMI to host music compilation instance.'
+         ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
             Type: GITHUB
             Location: 'https://github.com/kalrish/aws-music.git'
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
+            BuildSpec: 'ec2/worker/buildspec.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -498,15 +513,187 @@ Resources:
             PrivilegedMode: false
             EnvironmentVariables:
                -
-                  Name: INSTANCE_SECURITY_GROUP
+                  Name: INSTANCE_VPC
                   Type: PLAINTEXT
-                  Value: !GetAtt AmiBuildInstanceSecurityGroup.GroupId
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref PrivateSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref PrivateSubnet
             SecurityGroupIds:
-               - !GetAtt AmiBuildContainerSecurityGroup.GroupId
+               - !GetAtt NatSecurityGroup.GroupId
+               - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+   ServerAmiBuildContainerSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'Music AMI build container.'
+         VpcId: !Ref Vpc
+   ServerAmiBuildInstanceSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'Music AMI build instance.'
+         SecurityGroupIngress:
+            -
+               SourceSecurityGroupId: !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
+               FromPort: 22
+               ToPort: 22
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
+   ServerAmiBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: environment
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ecr:GetDownloadUrlForLayer'
+                           - 'ecr:BatchGetImage'
+                           - 'ecr:BatchCheckLayerAvailability'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'music-volume'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateTags'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'iam:PassRole'
+                        Resource:
+                           - !GetAtt VolumeBuildInstanceRole.Arn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeInstances'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'music-volume'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+   ServerAmiBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ServerAmiBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref ServerAmiBuildRole
+   ServerAmiBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: music-server-ami
+         Description: 'Build AMI to host music server instance.'
+         ServiceRole: !GetAtt ServerAmiBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: 'https://github.com/kalrish/aws-music.git'
+            GitCloneDepth: 1
+            BuildSpec: 'ec2/server/buildspec.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref PrivateSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref PrivateSubnet
+            SecurityGroupIds:
+               - !GetAtt NatSecurityGroup.GroupId
+               - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
    RunSecurityGroup:
@@ -520,3 +707,34 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
+   Ec2CodeBuildPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: ec2-codebuild
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'ec2:CreateNetworkInterface'
+                     - 'ec2:DeleteNetworkInterface'
+                     - 'ec2:DescribeDhcpOptions'
+                     - 'ec2:DescribeNetworkInterfaces'
+                     - 'ec2:DescribeSecurityGroups'
+                     - 'ec2:DescribeSubnets'
+                     - 'ec2:DescribeVpcs'
+                  Resource: '*'
+                  Effect: Allow
+               -
+                  Action:
+                     - 'ec2:CreateNetworkInterfacePermission'
+                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                  Condition:
+                     StringEquals:
+                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                        ec2:AuthorizedService: 'codebuild.amazonaws.com'
+                  Effect: Allow
+         Roles:
+            - !Ref VolumeBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole

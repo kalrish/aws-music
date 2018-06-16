@@ -1,13 +1,9 @@
 ---
 version: 0.2
 
-env:
-   parameter-store:
-      SSH_KEY: '/music/ec2/ssh-key'
-
 phases:
    build:
       commands:
-         - echo "${SSH_KEY}" >ssh.key
-         - echo chmod 0600 ssh.key
+         - cd ec2/server
          - packer build -color=false ec2/server/template.json
+         - cat manifest.json
