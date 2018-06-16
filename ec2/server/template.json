@@ -3,7 +3,7 @@
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
-		"ssh_user": "ec2-user",
+		"ssh_user": "root",
 		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
 		"vpc_id": "{{ env `INSTANCE_VPC` }}"
 	},

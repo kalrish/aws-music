@@ -5,5 +5,5 @@ phases:
    build:
       commands:
          - cd ec2/server
-         - packer build -color=false ec2/server/template.json
+         - packer build -color=false template.json
          - cat manifest.json

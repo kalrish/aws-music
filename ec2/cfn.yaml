@@ -435,7 +435,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              aws:RequestTag/Packer: 'music-volume'
+                              aws:RequestTag/Packer: 'music-worker'
                         Effect: Allow
                      -
                         Action:
@@ -590,7 +590,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              aws:RequestTag/Packer: 'music-volume'
+                              aws:RequestTag/Packer: 'music-server'
                         Effect: Allow
                      -
                         Action:
