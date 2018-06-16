@@ -11,7 +11,7 @@
 		{
 			"type": "shell",
 			"inline": [
-				"pacman -Sy python"
+				"pacman --color never --noconfirm -Sy python"
 			]
 		},
 		{
