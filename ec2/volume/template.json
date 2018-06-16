@@ -4,7 +4,7 @@
 		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
-		"security_group_id": "{{ env `INSTANCE_SECURITY_GROUP` }}",
+		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
 		"source_bucket": "{{ env `SOURCE_BUCKET` }}",
 		"ssh_user": "ec2-user",
 		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
@@ -19,7 +19,7 @@
 	"builders": [
 		{
 			"type": "amazon-ebsvolume",
-			"associate_public_ip_address": true,
+			"associate_public_ip_address": false,
 			"availability_zone": "{{ user `region` }}{{ user `availability_zone` }}",
 			"ebs_volumes": [
 				{
@@ -35,7 +35,7 @@
 			"run_tags": {
 				"Packer": "music-volume"
 			},
-			"security_group_id": "{{ user `security_group_id` }}",
+			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami_filter": {
 				"filters": {
 					"name": "amzn-ami-hvm-*-ebs",
