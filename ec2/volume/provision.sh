@@ -3,6 +3,7 @@
 
 set -e
 
+ping s3.amazonaws.com
 sudo mke2fs -t ext4 /dev/xvdf
 sudo mkdir /mnt/music
 sudo mount /dev/xvdf /mnt/music
