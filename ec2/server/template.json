@@ -10,7 +10,15 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"script": "provision.sh"
+			"inline": [
+				"python --version",
+				"echo sudo pacman apt-get -qq update && apt-get -qq install python-minimal"
+			]
+		},
+		{
+			"type": "ansible",
+			"playbook_file": "playbook.yaml",
+			"user": "{{ user `ssh_user` }}"
 		}
 	],
 	"builders": [
