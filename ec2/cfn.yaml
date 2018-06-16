@@ -477,7 +477,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              ec2:ResourceTag/Packer: 'music-volume'
+                              ec2:ResourceTag/Packer: 'music-worker'
                         Effect: Allow
    WorkerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
@@ -632,7 +632,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              ec2:ResourceTag/Packer: 'music-volume'
+                              ec2:ResourceTag/Packer: 'music-server'
                         Effect: Allow
                      -
                         Action:
@@ -641,6 +641,11 @@ Resources:
                            - 'ec2:ModifyImageAttribute'
                         Resource:
                            - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeVolumes'
+                        Resource: '*'
                         Effect: Allow
    ServerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'

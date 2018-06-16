@@ -11,8 +11,7 @@
 		{
 			"type": "shell",
 			"inline": [
-				"python --version",
-				"echo sudo pacman apt-get -qq update && apt-get -qq install python-minimal"
+				"pacman -Sy python"
 			]
 		},
 		{
