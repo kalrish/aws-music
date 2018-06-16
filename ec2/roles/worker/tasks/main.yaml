@@ -45,4 +45,4 @@
 - name: Enable tup monitor service
   systemd:
      name: music
-     state: enabled
+     enabled: yes
