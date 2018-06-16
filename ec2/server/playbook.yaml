@@ -1,19 +1,6 @@
 ---
 - name: Provision AMI
   hosts: all
-  tasks:
-     - name: Run dist-upgrade
-       apt:
-          update_cache: yes
-          upgrade: dist
-     - name: Install required packages
-       apt:
-          name: '{{ item }}'
-       with_items:
-          - rsync
----
-- name: Provision AMI
-  hosts: all
   gather_facts: false
   tasks:
      - name: lala
@@ -24,3 +11,6 @@
           state: present
           update_cache: yes
           upgrade: yes
+       with_items:
+          - openssh
+          - rsync
