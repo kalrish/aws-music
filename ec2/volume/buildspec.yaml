@@ -7,4 +7,4 @@ phases:
          #- curl -sS -o ec2/worker/ansible/files/get-pip.py 'https://bootstrap.pypa.io/get-pip.py'
          - cd ec2/volume
          - packer build -color=false template.json
-         - cat manifest.json
+         - aws ssm set-parameter --overwrite --name /music/volume --type String --value "$(jq -r '.builds[0].artifact_id' manifest.json)"

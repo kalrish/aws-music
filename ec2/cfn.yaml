@@ -76,12 +76,6 @@ Resources:
                FromPort: 22
                ToPort: 22
                IpProtocol: tcp
-         #SecurityGroupEgress:
-         #   -
-         #      DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
-         #      FromPort: 22
-         #      ToPort: 22
-         #      IpProtocol: tcp
          VpcId: !Ref Vpc
    BridgeSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -94,6 +88,14 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
+   BridgeInstanceSecurityGroupEgress:
+      Type: 'AWS::EC2::SecurityGroupEgress'
+      Properties:
+         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
+         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
+         FromPort: 22
+         ToPort: 22
+         IpProtocol: tcp
    NatSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -176,6 +178,12 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
+   VolumeParameter:
+      Type: 'AWS::SSM::Parameter'
+      Properties:
+         Name: !Sub '/music/volume'
+         Type: String
+         Value: ' '
    VolumeBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -286,6 +294,16 @@ Resources:
                            StringEquals:
                               ec2:ResourceTag/Packer: 'music-volume'
                         Effect: Allow
+            -
+               PolicyName: parameter-set
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ssm:PutParameter'
+                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${VolumeParameter}'
+                        Effect: Allow
    VolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
@@ -338,7 +356,7 @@ Resources:
       Type: 'AWS::CodeBuild::Project'
       Properties:
          Name: music-volume
-         Description: 'Populate EBS volume with music sources.'
+         Description: 'Prepare and populate music EBS volume.'
          ServiceRole: !GetAtt VolumeBuildRole.Arn
          Source:
             Type: GITHUB
