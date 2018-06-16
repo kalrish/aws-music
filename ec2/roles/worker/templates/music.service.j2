@@ -1,0 +1,9 @@
+[Unit]
+Description=Monitor files for changes
+Requires={{ mount_unit_name.stdout }}
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/tup monitor
+WorkingDirectory={{ mount_point }}
+Restart=on-failure
