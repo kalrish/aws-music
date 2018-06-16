@@ -1,0 +1,33 @@
+---
+- name: Update system and install required packages
+  pacman:
+     name: '{{ item }}'
+     state: present
+     update_cache: yes
+     upgrade: yes
+  with_items:
+     - tup
+- name: Format EBS volume
+  filesystem:
+     dev: '{{ dev }}'
+     fstype: '{{ fstype }}'
+- name: Mount EBS volume
+  mount:
+     state: mounted
+     src: '{{ dev }}'
+     fstype: '{{ fstype }}'
+     path: '{{ mount_point }}'
+     boot: no
+- name: Initialize tup database
+  command: tup init
+  chdir: '{{ mount_point }}'
+  become_user: music
+- name: Upload tup settings for music project
+  copy:
+     src: tup.ini
+     dest: '{{ mount_point }}/.tup/options'
+  become_user: music
+- name: Unmount EBS volume
+  mount:
+     state: unmounted
+     path: '{{ mount_point }}'

@@ -1,0 +1,6 @@
+---
+- name: Provision server AMI
+  hosts: all
+  roles:
+     - usergroup
+     - server

@@ -1,0 +1,13 @@
+---
+- name: Update system and install required packages
+  pacman:
+     name: '{{ item }}'
+     state: present
+     update_cache: yes
+     upgrade: yes
+  with_items:
+     - rsync
+- name: Enable rsync server
+  systemd:
+     name: rsyncd
+     enabled: yes

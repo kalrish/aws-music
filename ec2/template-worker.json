@@ -1,8 +1,5 @@
 {
 	"variables": {
-		"aws_access_key": "{{ env `AWS_ACCESS_KEY_ID` }}",
-		"aws_secret_key": "{{ env `AWS_SECRET_ACCESS_KEY` }}",
-		"aws_token": "{{ env `AWS_SESSION_TOKEN` }}",
 		"instance_type": "t2.micro",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUP` }}",
@@ -17,7 +14,7 @@
 		},
 		{
 			"type": "ansible",
-			"playbook_file": "playbook.yaml",
+			"playbook_file": "playbook-worker.yaml",
 			"user": "{{ user `ssh_user` }}"
 		}
 	],

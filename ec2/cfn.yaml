@@ -250,12 +250,6 @@ Resources:
                         Effect: Allow
                      -
                         Action:
-                           - 'iam:PassRole'
-                        Resource:
-                           - !GetAtt VolumeBuildInstanceRole.Arn
-                        Effect: Allow
-                     -
-                        Action:
                            - 'ec2:DescribeInstances'
                         Resource:
                            - '*'
@@ -296,38 +290,6 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref VolumeBuildRole
-   VolumeBuildInstanceRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'ec2.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: sources
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 's3:ListBucket'
-                        Resource: !ImportValue music-SourceBucketArn
-                        Effect: Allow
-                     -
-                        Action:
-                           - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
-                        Effect: Allow
-   VolumeBuildInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
-      Properties:
-         Roles:
-            - !Ref VolumeBuildInstanceRole
    VolumeBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
@@ -338,7 +300,7 @@ Resources:
             Type: GITHUB
             Location: 'https://github.com/kalrish/aws-music.git'
             GitCloneDepth: 1
-            BuildSpec: 'ec2/volume/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-volume.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -357,10 +319,6 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${VolumeBuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: INSTANCE_PROFILE
-                  Type: PLAINTEXT
-                  Value: !Ref VolumeBuildInstanceProfile
                -
                   Name: SOURCE_BUCKET
                   Type: PLAINTEXT
@@ -459,12 +417,6 @@ Resources:
                         Effect: Allow
                      -
                         Action:
-                           - 'iam:PassRole'
-                        Resource:
-                           - !GetAtt VolumeBuildInstanceRole.Arn
-                        Effect: Allow
-                     -
-                        Action:
                            - 'ec2:DescribeInstances'
                         Resource:
                            - '*'
@@ -505,7 +457,7 @@ Resources:
             Type: GITHUB
             Location: 'https://github.com/kalrish/aws-music.git'
             GitCloneDepth: 1
-            BuildSpec: 'ec2/worker/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-worker.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -614,12 +566,6 @@ Resources:
                         Effect: Allow
                      -
                         Action:
-                           - 'iam:PassRole'
-                        Resource:
-                           - !GetAtt VolumeBuildInstanceRole.Arn
-                        Effect: Allow
-                     -
-                        Action:
                            - 'ec2:DescribeInstances'
                         Resource:
                            - '*'
@@ -647,6 +593,16 @@ Resources:
                            - 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
+            -
+               PolicyName: parameter
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ssm:PutParameter'
+                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/server/*'
+                        Effect: Allow
    ServerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
@@ -673,7 +629,7 @@ Resources:
             Type: GITHUB
             Location: 'https://github.com/kalrish/aws-music.git'
             GitCloneDepth: 1
-            BuildSpec: 'ec2/server/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-server.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -701,17 +657,6 @@ Resources:
                - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
-   RunSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'Music run instances.'
-         SecurityGroupIngress:
-            -
-               CidrIp: '0.0.0.0/0'
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
    Ec2CodeBuildPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
@@ -743,3 +688,64 @@ Resources:
             - !Ref VolumeBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
+   WorkerInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: sources
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 's3:ListBucket'
+                        Resource: !ImportValue music-SourceBucketArn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 's3:GetObject'
+                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
+                        Effect: Allow
+   WorkerInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref WorkerInstanceRole
+   WorkerLaunchTemplate:
+      Type: 'AWS::EC2::LaunchTemplate'
+      Properties:
+         LaunchTemplateName: music-worker
+         LaunchTemplateData:
+            IamInstanceProfile: !Ref WorkerInstanceProfile
+            KeyName: music-worker
+            SecurityGroupIds:
+               - !GetAtt BridgeSecurityGroup.GroupId
+   ServerInstanceSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'Music server instances.'
+         SecurityGroupIngress:
+            -
+               CidrIp: 0.0.0.0/0
+               FromPort: 873
+               ToPort: 873
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
+   ServerLaunchTemplate:
+      Type: 'AWS::EC2::LaunchTemplate'
+      Properties:
+         LaunchTemplateName: music-server
+         LaunchTemplateData:
+            KeyName: music-server
+            SecurityGroupIds:
+               - !GetAtt BridgeSecurityGroup.GroupId
+               - !GetAtt ServerInstanceSecurityGroup.GroupId

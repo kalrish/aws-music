@@ -1,0 +1,10 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - cd ec2
+         - packer build -color=false template-server.json
+         - |
+             aws ec2 create-launch-template --launch-template-name music-server --type String --value "$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)"

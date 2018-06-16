@@ -1,7 +1,6 @@
 {
 	"variables": {
 		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
-		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
@@ -13,7 +12,17 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"script": "provision.sh"
+			"inline": [
+				"pacman --color never --noprogressbar --noconfirm -Sqy python"
+			]
+		},
+		{
+			"type": "ansible",
+			"playbook_file": "playbook-volume.yaml",
+			"user": "{{ user `ssh_user` }}",
+			"extra_arguments": [
+				"-vvv"
+			]
 		}
 	],
 	"builders": [
@@ -29,7 +38,6 @@
 					"volume_type": "gp2"
 				}
 			],
-			"iam_instance_profile": "{{ user `instance_profile` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
@@ -38,18 +46,18 @@
 			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami_filter": {
 				"filters": {
-					"name": "amzn-ami-hvm-*-ebs",
+					"name": "arch-linux-hvm-*.x86_64-ebs",
 					"root-device-type": "ebs",
 					"virtualization-type": "hvm"
 				},
 				"owners": [
-					"137112412989"
+					"093273469852"
 				],
 				"most_recent": true
 			},
 			"ssh_interface": "private_ip",
 			"ssh_keypair_name": "music-packer",
-			"ssh_private_key_file": "../music-packer.pem",
+			"ssh_private_key_file": "music-packer.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
 			"subnet_id": "{{ user `subnet_id` }}",
 			"vpc_id": "{{ user `vpc_id` }}"

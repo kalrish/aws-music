@@ -1,0 +1,6 @@
+---
+- name: Provision worker AMI
+  hosts: all
+  roles:
+     - usergroup
+     - worker

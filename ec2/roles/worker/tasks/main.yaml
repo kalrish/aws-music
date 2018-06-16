@@ -1,0 +1,27 @@
+---
+- name: Update system and install required packages
+  pacman:
+     name: '{{ item }}'
+     state: present
+     update_cache: yes
+     upgrade: yes
+  with_items:
+     - flac
+     - lame
+     - tup
+- name: Enable full dependency tracking for tup
+  file:
+     path: /usr/bin/tup
+     mode: +s
+- name: Install pip
+  script: get-pip.py
+- name: Install AWS CLI
+  pip:
+     name: awscli
+- name: Create working volume mount point
+  file:
+     path: '{{ mount_point }}'
+     state: directory
+     owner: music
+     group: music
+     mode: u=rw,g=r

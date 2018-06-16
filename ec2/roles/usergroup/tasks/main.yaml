@@ -1,0 +1,13 @@
+---
+- name: Create working group
+  group:
+     name: music
+     state: present
+     gid: 1024
+- name: Create working user
+  user:
+     name: music
+     state: present
+     uid: 1013
+     group: music
+     create_home: no

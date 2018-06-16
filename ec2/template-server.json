@@ -16,10 +16,10 @@
 		},
 		{
 			"type": "ansible",
-			"playbook_file": "playbook.yaml",
+			"playbook_file": "playbook-server.yaml",
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-vvvv"
+				"-vvv"
 			]
 		}
 	],
@@ -47,7 +47,7 @@
 			},
 			"ssh_interface": "private_ip",
 			"ssh_keypair_name": "music-packer",
-			"ssh_private_key_file": "../music-packer.pem",
+			"ssh_private_key_file": "music-packer.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
 			"subnet_id": "{{ user `subnet_id` }}",
 			"vpc_id": "{{ user `vpc_id` }}"
