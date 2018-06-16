@@ -1,6 +1,6 @@
 FROM archlinux/base
 
-RUN pacman --noconfirm -Syu flac lame python tup
+RUN pacman --color never --noconfirm -Syu flac lame python tup
 
 COPY get-pip.py /tmp/
 
