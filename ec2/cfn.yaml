@@ -296,6 +296,38 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref VolumeBuildRole
+   VolumeBuildInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: s3-source
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 's3:ListBucket'
+                        Resource: !ImportValue music-SourceBucketArn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 's3:GetObject'
+                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
+                        Effect: Allow
+   VolumeBuildInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref VolumeBuildInstanceRole
    VolumeBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
@@ -325,6 +357,10 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUP
                   Type: PLAINTEXT
                   Value: !GetAtt VolumeBuildInstanceSecurityGroup.GroupId
+               -
+                  Name: INSTANCE_PROFILE
+                  Type: PLAINTEXT
+                  Value: !Ref VolumeBuildInstanceProfile
                -
                   Name: SOURCE_BUCKET
                   Type: PLAINTEXT
