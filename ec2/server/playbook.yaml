@@ -1,7 +1,6 @@
 ---
 - name: Provision AMI
   hosts: all
-  gather_facts: false
   tasks:
      - name: Update system and install required packages
        pacman:
