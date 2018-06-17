@@ -1,6 +1,5 @@
 [Unit]
 Description=Build music library
-Requires={{ sources_mount_unit_name.stdout }}
 
 [Service]
 Type=oneshot
@@ -8,4 +7,3 @@ ExecStart=/usr/bin/tup
 User=music
 Group=music
 WorkingDirectory={{ work_dir }}
-Restart=on-failure

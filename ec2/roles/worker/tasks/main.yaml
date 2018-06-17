@@ -98,7 +98,7 @@
      state: directory
      owner: root
      group: root
-     mode: 0000
+     mode: u=rwx,g=rwx,o=rx
 - name: Set up work directory
   mount:
      state: mounted
