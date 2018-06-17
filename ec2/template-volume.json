@@ -1,7 +1,7 @@
 {
 	"variables": {
 		"availability_zone": "{{ env `AVAILABILITY_ZONE` }}",
-		"device_name": "/dev/sdf",
+		"device_name": "/dev/xvdf",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
