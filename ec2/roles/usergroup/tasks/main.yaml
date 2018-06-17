@@ -12,5 +12,5 @@
      uid: 1013
      group: music
      system: yes
-     home:
+     home: ''
      create_home: no
