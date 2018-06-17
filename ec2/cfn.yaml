@@ -431,6 +431,39 @@ Resources:
                            StringEquals:
                               ec2:ResourceTag/Packer: 'music-worker'
                         Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
    WorkerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
