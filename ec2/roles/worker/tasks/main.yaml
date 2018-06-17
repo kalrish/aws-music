@@ -27,26 +27,6 @@
   pip:
      name: awscli
      state: present
-- name: Determine systemd mount unit name for sources device
-  command: 'systemd-escape --path {{ sources_mount_point }}'
-  register: sources_mount_unit_name
-- name: Upload systemd mount unit for sources device
-  template:
-     src: 'music-sources.mount.j2'
-     dest: '/etc/systemd/system/{{ sources_mount_unit_name.stdout }}.mount'
-     owner: root
-     group: root
-     mode: u=rw,g=r,o=r
-- name: Determine systemd mount unit name for builds device
-  command: 'systemd-escape --path {{ builds_mount_point }}'
-  register: builds_mount_unit_name
-- name: Upload systemd mount unit for builds device
-  template:
-     src: 'music-builds.mount.j2'
-     dest: '/etc/systemd/system/{{ builds_mount_unit_name.stdout }}.mount'
-     owner: root
-     group: root
-     mode: u=rw,g=r,o=r
 - name: Upload systemd service units
   template:
      src: 'music-{{ item }}.service.j2'
