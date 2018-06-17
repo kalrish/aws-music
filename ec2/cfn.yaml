@@ -27,6 +27,11 @@ Parameters:
 Conditions:
    EnableIpv6: !Equals [ !Ref EnableIpv6 , 'yes' ]
 Resources:
+   SourceRepository:
+      Type: 'AWS::CodeCommit::Repository'
+      Properties:
+         RepositoryName: music
+         RepositoryDescription: 'AWS-based music compilation system.'
    Vpc:
       Type: 'AWS::EC2::VPC'
       Properties:
@@ -210,6 +215,16 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
+               PolicyName: source
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'codecommit:GitPull'
+                        Resource: !GetAtt SourceRepository.Arn
+                        Effect: Allow
+            -
                PolicyName: packer
                PolicyDocument:
                   Version: '2012-10-17'
@@ -297,8 +312,8 @@ Resources:
          Description: 'Prepare and populate music EBS volume.'
          ServiceRole: !GetAtt VolumeBuildRole.Arn
          Source:
-            Type: GITHUB
-            Location: 'https://github.com/kalrish/aws-music.git'
+            Type: CODECOMMIT
+            Location: !GetAtt SourceRepository.CloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-volume.yaml'
          Environment:
@@ -371,6 +386,16 @@ Resources:
                            - 'ecr:BatchGetImage'
                            - 'ecr:BatchCheckLayerAvailability'
                         Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: source
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'codecommit:GitPull'
+                        Resource: !GetAtt SourceRepository.Arn
                         Effect: Allow
             -
                PolicyName: packer
@@ -483,8 +508,8 @@ Resources:
          Description: 'Build AMI to host music compilation instance.'
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
-            Type: GITHUB
-            Location: 'https://github.com/kalrish/aws-music.git'
+            Type: CODECOMMIT
+            Location: !GetAtt SourceRepository.CloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-worker.yaml'
          Environment:
@@ -557,6 +582,16 @@ Resources:
                            - 'ecr:BatchGetImage'
                            - 'ecr:BatchCheckLayerAvailability'
                         Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: source
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'codecommit:GitPull'
+                        Resource: !GetAtt SourceRepository.Arn
                         Effect: Allow
             -
                PolicyName: packer
@@ -669,8 +704,8 @@ Resources:
          Description: 'Build AMI to host music server instance.'
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
-            Type: GITHUB
-            Location: 'https://github.com/kalrish/aws-music.git'
+            Type: CODECOMMIT
+            Location: !GetAtt SourceRepository.CloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-server.yaml'
          Environment:
