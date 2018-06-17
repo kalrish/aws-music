@@ -598,14 +598,24 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: parameter
+               PolicyName: launch-template
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
                         Action:
-                           - 'ssm:PutParameter'
-                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/server/*'
+                           - 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
                         Effect: Allow
    ServerAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
