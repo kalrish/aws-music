@@ -6,6 +6,5 @@ phases:
       commands:
          - cd ec2
          - packer build -color=false template-server.json
-         - aws --query 'LaunchTemplates[0].DefaultVersionNumber' --output json ec2 describe-launch-templates --launch-template-names music-server
          - |
             aws ec2 modify-launch-template --launch-template-name "${LAUNCH_TEMPLATE_NAME}" --default-version "$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-name "${LAUNCH_TEMPLATE_NAME}" --source-version "$(aws --query 'LaunchTemplates[0].DefaultVersionNumber' --output text ec2 describe-launch-templates --launch-template-names "${LAUNCH_TEMPLATE_NAME}")" --launch-template-data "{\"ImageId\":\"$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)\"}")"
