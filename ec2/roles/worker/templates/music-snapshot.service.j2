@@ -1,0 +1,10 @@
+[Unit]
+Description=Snapshot build volume
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/aws ec2 create-snapshot --dryrun --quiet --delete s3://{{ source_bucket }} {{ mount_point }}
+User=music
+Group=music
+WorkingDirectory={{ mount_point }}
+Restart=on-failure

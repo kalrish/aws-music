@@ -11,6 +11,7 @@
      - e2fsprogs
      - f2fs-tools
      - flac
+     - git
      - lame
      - opus-tools
      - tup
@@ -75,10 +76,11 @@
      src: tup.ini
      dest: '{{ mount_point }}/.tup/options'
   become_user: music
-- name: Upload build code
-  copy:
-     src: tup
-     dest: '{{ mount_point }}'
+- name: Download build code
+  git:
+     repo: '{{ source_repository }}'
+     dest: '{{ tupcode_directory }}'
+     clone: yes
   become_user: music
 - name: Unmount EBS volume
   mount:
