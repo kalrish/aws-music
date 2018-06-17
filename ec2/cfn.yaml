@@ -320,10 +320,6 @@ Resources:
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${VolumeBuildInstanceSecurityGroup.GroupId}'
                -
-                  Name: SOURCE_BUCKET
-                  Type: PLAINTEXT
-                  Value: !ImportValue music-SourceBucket
-               -
                   Name: AVAILABILITY_ZONE
                   Type: PLAINTEXT
                   Value: !Ref AvailabilityZone
