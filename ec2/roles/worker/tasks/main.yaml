@@ -1,8 +1,6 @@
 ---
 - name: Update system software
   pacman:
-     name: '{{ item }}'
-     state: present
      update_cache: yes
      upgrade: yes
 - name: Install required packages
