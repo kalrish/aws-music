@@ -12,5 +12,5 @@
      uid: '{{ uid }}'
      group: music
      system: yes
-     home: '{{ mount_point }}'
+     home: '/'
      create_home: no
