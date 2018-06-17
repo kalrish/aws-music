@@ -774,7 +774,6 @@ Resources:
          LaunchTemplateData:
             IamInstanceProfile:
                Arn: !GetAtt WorkerInstanceProfile.Arn
-               Name: !Ref WorkerInstanceProfile
             KeyName: music-worker
             NetworkInterfaces:
                -
