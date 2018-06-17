@@ -4,10 +4,12 @@
      name: music
      state: present
      gid: 1024
+     system: yes
 - name: Create working user
   user:
      name: music
      state: present
      uid: 1013
      group: music
+     system: yes
      create_home: no

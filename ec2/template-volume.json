@@ -20,6 +20,9 @@
 		{
 			"type": "ansible",
 			"playbook_file": "playbook-volume.yaml",
+			"groups": [
+				"common"
+			],
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
 				"-vvv",

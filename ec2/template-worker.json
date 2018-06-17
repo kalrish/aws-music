@@ -15,6 +15,9 @@
 		{
 			"type": "ansible",
 			"playbook_file": "playbook-worker.yaml",
+			"groups": [
+				"common"
+			],
 			"user": "{{ user `ssh_user` }}"
 		}
 	],
