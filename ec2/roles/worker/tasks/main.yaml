@@ -61,7 +61,6 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-     - '{{ work_dir }}'
 - name: Mount sources volume
   mount:
      state: mounted
@@ -98,6 +97,13 @@
      state: directory
      owner: root
      group: root
+     mode: u=rwx,g=rwx,o=rx
+- name: Create work directory
+  file:
+     path: '{{ work_dir }}'
+     state: directory
+     owner: music
+     group: music
      mode: u=rwx,g=rwx,o=rx
 - name: Set up work directory
   mount:
