@@ -63,11 +63,11 @@
   systemd:
      name: music-monitor
      enabled: yes
-- name: Format sources EBS volume
+- name: Format sources volume
   filesystem:
      dev: '{{ sources_device_name }}'
      fstype: '{{ sources_fs_type }}'
-- name: Format builds EBS volume
+- name: Format builds volume
   filesystem:
      dev: '{{ builds_device_name }}'
      fstype: '{{ builds_fs_type }}'
