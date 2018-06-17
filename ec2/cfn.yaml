@@ -476,6 +476,10 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: LAUNCH_TEMPLATE_NAME
+                  Type: PLAINTEXT
+                  Value: music-worker
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
@@ -648,6 +652,10 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: LAUNCH_TEMPLATE_NAME
+                  Type: PLAINTEXT
+                  Value: music-server
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
@@ -729,8 +737,13 @@ Resources:
                Arn: !GetAtt WorkerInstanceProfile.Arn
                Name: !Ref WorkerInstanceProfile
             KeyName: music-worker
-            SecurityGroupIds:
-               - !GetAtt BridgeSecurityGroup.GroupId
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups:
+                     - !GetAtt BridgeSecurityGroup.GroupId
+                  SubnetId: !Ref PrivateSubnet
+                  AssociatePublicIpAddress: false
    ServerInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -748,6 +761,11 @@ Resources:
          LaunchTemplateName: music-server
          LaunchTemplateData:
             KeyName: music-server
-            SecurityGroupIds:
-               - !GetAtt BridgeSecurityGroup.GroupId
-               - !GetAtt ServerInstanceSecurityGroup.GroupId
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups:
+                     - !GetAtt BridgeSecurityGroup.GroupId
+                     - !GetAtt ServerInstanceSecurityGroup.GroupId
+                  SubnetId: !Ref PublicSubnet
+                  AssociatePublicIpAddress: true
