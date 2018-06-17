@@ -1,10 +1,12 @@
 ---
-- name: Update system and install required packages
+- name: Update system software
+  pacman:
+     update_cache: yes
+     upgrade: yes
+- name: Install required packages
   pacman:
      name: '{{ item }}'
      state: present
-     update_cache: yes
-     upgrade: yes
   with_items:
      - tup
 - name: Format EBS volume

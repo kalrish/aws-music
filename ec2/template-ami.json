@@ -11,9 +11,7 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"inline": [
-				"pacman --color never --noprogressbar --noconfirm -Sqy python"
-			]
+			"script": "prepare.sh"
 		},
 		{
 			"type": "ansible",
