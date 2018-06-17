@@ -191,28 +191,6 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: environment
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ecr:GetDownloadUrlForLayer'
-                           - 'ecr:BatchGetImage'
-                           - 'ecr:BatchCheckLayerAvailability'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: code
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-SourceRepositoryArn
-                        Effect: Allow
-            -
                PolicyName: packer
                PolicyDocument:
                   Version: '2012-10-17'
@@ -335,16 +313,6 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: code
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-SourceRepositoryArn
-                        Effect: Allow
-            -
                PolicyName: sources
                PolicyDocument:
                   Version: '2012-10-17'
@@ -438,28 +406,6 @@ Resources:
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
-            -
-               PolicyName: environment
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ecr:GetDownloadUrlForLayer'
-                           - 'ecr:BatchGetImage'
-                           - 'ecr:BatchCheckLayerAvailability'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: code
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-SourceRepositoryArn
-                        Effect: Allow
             -
                PolicyName: packer
                PolicyDocument:
@@ -606,10 +552,43 @@ Resources:
                - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
+   EcrPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codebuild-environment
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'ecr:GetDownloadUrlForLayer'
+                     - 'ecr:BatchGetImage'
+                     - 'ecr:BatchCheckLayerAvailability'
+                  Resource: '*'
+                  Effect: Allow
+         Roles:
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+   CodeCommitPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codecommit-pull
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'codecommit:GitPull'
+                  Resource: !ImportValue music-SourceRepositoryArn
+                  Effect: Allow
+         Roles:
+            - !Ref WorkerAmiBuildRole
+            - !Ref WorkerInstanceRole
+            - !Ref ServerAmiBuildRole
    Ec2CodeBuildPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
-         PolicyName: ec2-codebuild
+         PolicyName: codebuild-vpc
          PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -634,7 +613,6 @@ Resources:
                         ec2:AuthorizedService: 'codebuild.amazonaws.com'
                   Effect: Allow
          Roles:
-            - !Ref VolumeBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
    WorkerLaunchTemplate:
