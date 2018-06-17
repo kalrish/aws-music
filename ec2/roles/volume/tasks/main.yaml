@@ -29,7 +29,8 @@
      boot: no
 - name: Initialize tup database
   command: tup init
-  chdir: '{{ mount_point }}'
+  args:
+     chdir: '{{ mount_point }}'
   become_user: music
 - name: Upload tup settings for music project
   copy:
