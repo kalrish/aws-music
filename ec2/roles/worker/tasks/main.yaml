@@ -27,73 +27,96 @@
   pip:
      name: awscli
      state: present
-- name: Determine systemd mount unit name
-  command: 'systemd-escape --path {{ mount_point }}'
-  register: mount_unit_name
-- name: Upload systemd mount unit
+- name: Determine systemd mount unit name for sources device
+  command: 'systemd-escape --path {{ sources_mount_point }}'
+  register: sources_mount_unit_name
+- name: Upload systemd mount unit for sources device
   template:
-     src: 'music.mount.j2'
-     dest: '/etc/systemd/system/{{ mount_unit_name.stdout }}.mount'
+     src: 'music-sources.mount.j2'
+     dest: '/etc/systemd/system/{{ sources_mount_unit_name.stdout }}.mount'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
-- name: Upload systemd service unit
+- name: Determine systemd mount unit name for builds device
+  command: 'systemd-escape --path {{ builds_mount_point }}'
+  register: builds_mount_unit_name
+- name: Upload systemd mount unit for builds device
   template:
-     src: 'music.service.j2'
-     dest: '/etc/systemd/system/music.service'
+     src: 'music-builds.mount.j2'
+     dest: '/etc/systemd/system/{{ builds_mount_unit_name.stdout }}.mount'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
+- name: Upload systemd service units
+  template:
+     src: 'music-{{ item }}.service.j2'
+     dest: '/etc/systemd/system/music-{{ item }}.service'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
+  with_items:
+     - build
+     - monitor
+     - snapshot
+     - sync
 - name: Enable tup monitor service
   systemd:
-     name: music
+     name: music-monitor
      enabled: yes
-- name: Format source EBS volume
+- name: Format sources EBS volume
   filesystem:
-     dev: '{{ dev }}'
-     fstype: '{{ source_fs_type }}'
-- name: Format build EBS volume
+     dev: '{{ sources_device_name }}'
+     fstype: '{{ sources_fs_type }}'
+- name: Format builds EBS volume
   filesystem:
-     dev: '{{ dev }}'
-     fstype: '{{ build_fs_type }}'
-- name: Create source volume mount point
+     dev: '{{ builds_device_name }}'
+     fstype: '{{ builds_fs_type }}'
+- name: Create sources volume mount point
   file:
-     path: '{{ mount_point }}'
+     path: '{{ sources_mount_point }}'
      state: directory
      owner: music
      group: music
      mode: u=r,g=r
-- name: Create build volume mount point
+- name: Create builds volume mount point
   file:
-     path: '{{ mount_point }}'
+     path: '{{ builds_mount_point }}'
      state: directory
      owner: music
      group: music
      mode: u=rw,g=r
-- name: Mount EBS volume
+- name: Mount sources volume
   mount:
      state: mounted
-     src: '{{ dev }}'
-     fstype: '{{ fs_type }}'
-     path: '{{ mount_point }}'
-     boot: no
+     src: '{{ sources_device_name }}'
+     fstype: '{{ sources_fs_type }}'
+     path: '{{ sources_mount_point }}'
+- name: Mount builds volume
+  mount:
+     state: mounted
+     src: '{{ sources_device_name }}'
+     fstype: '{{ sources_fs_type }}'
+     path: '{{ sources_mount_point }}'
 - name: Initialize tup database
   command: tup init
   args:
-     chdir: '{{ mount_point }}'
+     chdir: '{{ work_dir }}'
   become_user: music
 - name: Upload tup settings for music project
   copy:
      src: tup.ini
-     dest: '{{ mount_point }}/.tup/options'
+     dest: '{{ work_dir }}/.tup/options'
   become_user: music
 - name: Download build code
   git:
-     repo: '{{ source_repository }}'
-     dest: '{{ tupcode_directory }}'
+     repo: '{{ code_repo }}'
+     dest: '{{ code_dir }}'
      clone: yes
   become_user: music
-- name: Unmount EBS volume
+- name: Unmount volumes
   mount:
      state: unmounted
-     path: '{{ mount_point }}'
+     path: '{{ item }}'
+  with_items:
+     - '{{ sources_mount_point }}'
+     - '{{ builds_mount_point }}'

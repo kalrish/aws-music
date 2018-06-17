@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"builds_device_name": "/dev/xvdg",
+		"code_repository": "{{ env `CODE_REPOSITORY` }}",
 		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
@@ -23,7 +24,9 @@
 			],
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-vvv"
+				"-vvv",
+				"--extra-vars",
+				"code_repo={{ user `code_repository` }}"
 			]
 		}
 	],

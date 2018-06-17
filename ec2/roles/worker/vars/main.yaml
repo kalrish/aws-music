@@ -1,5 +1,6 @@
 ---
-build_mount_point: /mnt/music/builds
-source_mount_point: /mnt/music/sources
-source_fs_type: ext4
-tupcode_directory: /var/opt/music
+builds_mount_point: /mnt/music/builds
+code_dir: /var/opt/music/code
+sources_mount_point: /mnt/music/sources
+sources_fs_type: ext4
+work_dir: /var/opt/music/work
