@@ -696,9 +696,9 @@ Resources:
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
                -
-                  Name: LAUNCH_TEMPLATE_NAME
+                  Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
-                  Value: music-server
+                  Value: !Ref ServerLaunchTemplate
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
