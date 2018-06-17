@@ -11,3 +11,10 @@
   systemd:
      name: rsyncd
      enabled: yes
+- name: Upload rsync server configuration
+  template:
+     src: 'rsyncd.conf.j2'
+     dest: '/etc/rsyncd.conf'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r

@@ -20,6 +20,7 @@
 - name: Install AWS CLI
   pip:
      name: awscli
+     state: present
 - name: Create working volume mount point
   file:
      path: '{{ mount_point }}'
