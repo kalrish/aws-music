@@ -1,10 +1,8 @@
 [Unit]
 Description=Synchronize music sources
-Requires={{ sources_mount_unit_name.stdout }}
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/aws s3 sync --dryrun --quiet --delete s3://{{ sources_bucket }} {{ sources_mount_point }}
 User=music
 Group=music
-Restart=on-failure
