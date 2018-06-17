@@ -370,6 +370,10 @@ Resources:
                   Type: PLAINTEXT
                   Value: !ImportValue music-SourceRepositoryCloneUrlHttp
                -
+                  Name: SOURCES_BUCKET
+                  Type: PLAINTEXT
+                  Value: !ImportValue music-SourceBucket
+               -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
                   Value: !Ref WorkerLaunchTemplate

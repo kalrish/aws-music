@@ -6,6 +6,7 @@
 		"instance_type": "t2.nano",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
+		"sources_bucket": "{{ env `SOURCES_BUCKET` }}",
 		"sources_device_name": "/dev/xvdf",
 		"ssh_user": "root",
 		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
