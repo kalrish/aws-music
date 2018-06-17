@@ -91,9 +91,9 @@
 - name: Mount builds volume
   mount:
      state: mounted
-     src: '{{ sources_device_name }}'
-     fstype: '{{ sources_fs_type }}'
-     path: '{{ sources_mount_point }}'
+     src: '{{ builds_device_name }}'
+     fstype: '{{ builds_fs_type }}'
+     path: '{{ builds_mount_point }}'
 - name: Set up git for CodeCommit access
   git_config:
      scope: system
