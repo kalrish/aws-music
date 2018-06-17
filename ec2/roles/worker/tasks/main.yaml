@@ -71,20 +71,17 @@
   filesystem:
      dev: '{{ builds_device_name }}'
      fstype: '{{ builds_fs_type }}'
-- name: Create sources volume mount point
+- name: Create mount points
   file:
-     path: '{{ sources_mount_point }}'
+     path: '{{ item }}'
      state: directory
-     owner: music
-     group: music
-     mode: u=r,g=r
-- name: Create builds volume mount point
-  file:
-     path: '{{ builds_mount_point }}'
-     state: directory
-     owner: music
-     group: music
-     mode: u=rw,g=r
+     owner: root
+     group: root
+     mode: 0000
+  with_items:
+     - '{{ sources_mount_point }}'
+     - '{{ builds_mount_point }}'
+     - '{{ work_dir }}'
 - name: Mount sources volume
   mount:
      state: mounted
@@ -97,6 +94,26 @@
      src: '{{ sources_device_name }}'
      fstype: '{{ sources_fs_type }}'
      path: '{{ sources_mount_point }}'
+- name: Download build code
+  git:
+     repo: '{{ code_repo }}'
+     dest: '{{ code_dir }}'
+     clone: yes
+  become_user: music
+- name: Create OverlayFS workdir
+  file:
+     path: '{{ builds_mount_point }}/.overlayfs'
+     state: directory
+     owner: root
+     group: root
+     mode: 0000
+- name: Set up work directory
+  mount:
+     state: mounted
+     src: overlay
+     fstype: overlay
+     opts: 'lowerdir={{ sources_mount_point }}:{{ code_dir }}:{{ profiles_dir }},upperdir={{ builds_mount_point }},workdir={{ builds_mount_point }}/.overlayfs'
+     path: '{{ work_dir }}'
 - name: Initialize tup database
   command: tup init
   args:
@@ -106,12 +123,6 @@
   copy:
      src: tup.ini
      dest: '{{ work_dir }}/.tup/options'
-  become_user: music
-- name: Download build code
-  git:
-     repo: '{{ code_repo }}'
-     dest: '{{ code_dir }}'
-     clone: yes
   become_user: music
 - name: Unmount volumes
   mount:

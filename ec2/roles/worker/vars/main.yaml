@@ -1,6 +1,7 @@
 ---
 builds_mount_point: /mnt/music/builds
 code_dir: /var/opt/music/code
+profiles_dir: /var/opt/music/profiles
 sources_mount_point: /mnt/music/sources
 sources_fs_type: ext4
 work_dir: /var/opt/music/work
