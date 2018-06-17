@@ -1,3 +1,5 @@
 ---
-mount_point: /mnt/music
-tupcode_directory: /var/music
+build_mount_point: /mnt/music/builds
+source_mount_point: /mnt/music/sources
+source_fs_type: ext4
+tupcode_directory: /var/opt/music

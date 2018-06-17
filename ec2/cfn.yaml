@@ -162,186 +162,6 @@ Resources:
       Properties:
          RouteTableId: !Ref PrivateRouteTable
          SubnetId: !Ref PrivateSubnet
-   VolumeBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'Music volume build container.'
-         VpcId: !Ref Vpc
-   VolumeBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'Music volume build instance.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt VolumeBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   VolumeParameter:
-      Type: 'AWS::SSM::Parameter'
-      Properties:
-         Name: !Sub '/music/volume'
-         Type: String
-         AllowedPattern: 'vol-[a-z0-9]+'
-         Value: 'vol-invalid'
-   VolumeBuildRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'codebuild.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: environment
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ecr:GetDownloadUrlForLayer'
-                           - 'ecr:BatchGetImage'
-                           - 'ecr:BatchCheckLayerAvailability'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: source
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-SourceRepositoryArn
-                        Effect: Allow
-            -
-               PolicyName: packer
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeImages'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'music-volume'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:CreateAction: 'RunInstances'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:StopInstances'
-                           - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:ResourceTag/Packer: 'music-volume'
-                        Effect: Allow
-            -
-               PolicyName: parameter
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ssm:PutParameter'
-                        Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${VolumeParameter}'
-                        Effect: Allow
-   VolumeBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: logs
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'logs:CreateLogGroup'
-                     - 'logs:CreateLogStream'
-                     - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolumeBuildProject}:*'
-                  Effect: Allow
-         Roles:
-            - !Ref VolumeBuildRole
-   VolumeBuildProject:
-      Type: 'AWS::CodeBuild::Project'
-      Properties:
-         Name: music-volume
-         Description: 'Prepare and populate music EBS volume.'
-         ServiceRole: !GetAtt VolumeBuildRole.Arn
-         Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
-            GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec-volume.yaml'
-         Environment:
-            Type: LINUX_CONTAINER
-            ComputeType: BUILD_GENERAL1_SMALL
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
-            PrivilegedMode: false
-            EnvironmentVariables:
-               -
-                  Name: INSTANCE_VPC
-                  Type: PLAINTEXT
-                  Value: !Ref Vpc
-               -
-                  Name: INSTANCE_SUBNET
-                  Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
-               -
-                  Name: INSTANCE_SECURITY_GROUPS
-                  Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${VolumeBuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: AVAILABILITY_ZONE
-                  Type: PLAINTEXT
-                  Value: !Ref AvailabilityZone
-         VpcConfig:
-            VpcId: !Ref Vpc
-            Subnets:
-               - !Ref PrivateSubnet
-            SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
-               - !GetAtt VolumeBuildContainerSecurityGroup.GroupId
-         Artifacts:
-            Type: NO_ARTIFACTS
    WorkerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -383,7 +203,7 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: source
+               PolicyName: code
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -430,6 +250,12 @@ Resources:
                         Condition:
                            StringEquals:
                               ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'iam:PassRole'
+                        Resource:
+                           - !GetAtt WorkerInstanceRole.Arn
                         Effect: Allow
                      -
                         Action:
@@ -496,6 +322,48 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref WorkerAmiBuildRole
+   WorkerInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: code
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'codecommit:GitPull'
+                        Resource: !ImportValue music-SourceRepositoryArn
+                        Effect: Allow
+            -
+               PolicyName: sources
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 's3:ListBucket'
+                        Resource: !ImportValue music-SourceBucketArn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 's3:GetObject'
+                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
+                        Effect: Allow
+   WorkerInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref WorkerInstanceRole
    WorkerAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
@@ -525,6 +393,10 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: INSTANCE_PROFILE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerInstanceProfile
                -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
@@ -579,7 +451,7 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: source
+               PolicyName: code
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -765,38 +637,6 @@ Resources:
             - !Ref VolumeBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
-   WorkerInstanceRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'ec2.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: sources
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 's3:ListBucket'
-                        Resource: !ImportValue music-SourceBucketArn
-                        Effect: Allow
-                     -
-                        Action:
-                           - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
-                        Effect: Allow
-   WorkerInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
-      Properties:
-         Roles:
-            - !Ref WorkerInstanceRole
    WorkerLaunchTemplate:
       Type: 'AWS::EC2::LaunchTemplate'
       Properties:

@@ -48,11 +48,22 @@
   systemd:
      name: music
      enabled: yes
-- name: Format EBS volume
+- name: Format source EBS volume
   filesystem:
      dev: '{{ dev }}'
-     fstype: '{{ fs_type }}'
-- name: Create working volume mount point
+     fstype: '{{ source_fs_type }}'
+- name: Format build EBS volume
+  filesystem:
+     dev: '{{ dev }}'
+     fstype: '{{ build_fs_type }}'
+- name: Create source volume mount point
+  file:
+     path: '{{ mount_point }}'
+     state: directory
+     owner: music
+     group: music
+     mode: u=r,g=r
+- name: Create build volume mount point
   file:
      path: '{{ mount_point }}'
      state: directory
