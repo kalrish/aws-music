@@ -3,27 +3,11 @@ AWSTemplateFormatVersion: '2010-09-09'
 Resources:
    SourceBucket:
       Type: 'AWS::S3::Bucket'
-   #SourceBucketPolicy:
-   #   Type: 'AWS::S3::BucketPolicy'
-   #   Properties:
-   #      Bucket: !Ref SourceBucket
-   #      PolicyDocument:
-   #         Version: '2012-10-17'
-   #         Statement:
-   #            -
-   #               Principal:
-   #                  AWS: !GetAtt BuildRole.Arn
-   #               Action:
-   #                  - 's3:ListBucket'
-   #               Resource: !GetAtt SourceBucket.Arn
-   #               Effect: Allow
-   #            -
-   #               Principal:
-   #                  AWS: !GetAtt BuildRole.Arn
-   #               Action:
-   #                  - 's3:GetObject'
-   #               Resource: !Join [ '/', [ !GetAtt SourceBucket.Arn, '*' ] ]
-   #               Effect: Allow
+   SourceRepository:
+      Type: 'AWS::CodeCommit::Repository'
+      Properties:
+         RepositoryName: music
+         RepositoryDescription: 'AWS-based music compilation system.'
 Outputs:
    SourceBucket:
       Description: 'Name of the source bucket.'
@@ -35,3 +19,13 @@ Outputs:
       Value: !GetAtt SourceBucket.Arn
       Export:
          Name: music-SourceBucketArn
+   SourceRepositoryArn:
+      Description: 'ARN of the source repository.'
+      Value: !GetAtt SourceRepository.Arn
+      Export:
+         Name: music-SourceRepositoryArn
+   SourceRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the source repository.'
+      Value: !GetAtt SourceRepository.CloneUrlHttp
+      Export:
+         Name: music-SourceRepositoryCloneUrlHttp

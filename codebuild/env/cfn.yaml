@@ -108,8 +108,8 @@ Resources:
          Description: 'Build CodeBuild environments to compile music collections.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
-            Type: GITHUB
-            Location: 'https://github.com/kalrish/aws-music.git'
+            Type: CODECOMMIT
+            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'codebuild/env/buildspec.yaml'
          Environment:

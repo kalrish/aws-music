@@ -1,9 +1,11 @@
 [Unit]
-Description=Monitor files for changes
+Description=Build music library
 Requires={{ mount_unit_name.stdout }}
 
 [Service]
-Type=simple
-ExecStart=/usr/bin/tup monitor
+Type=oneshot
+ExecStart=/usr/bin/tup
+User=music
+Group=music
 WorkingDirectory={{ mount_point }}
 Restart=on-failure

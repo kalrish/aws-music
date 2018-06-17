@@ -11,7 +11,6 @@ phases:
          - cd ec2
         #- echo "${SSH_KEY}" >music-packer.pem
         #- echo chmod 0600 music-packer.pem
-         - mkdir -p 'roles/worker/files'
          - curl -sS -o 'roles/worker/files/get-pip.py' 'https://bootstrap.pypa.io/get-pip.py'
          - packer build -color=false -var 'name=worker' template-ami.json
          - |

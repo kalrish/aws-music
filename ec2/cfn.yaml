@@ -4,7 +4,7 @@ Parameters:
    AvailabilityZone:
       Description: 'Availability zone in which to create EC2 resources.'
       Type: String
-      AllowedPattern: '[a-zA-Z]'
+      AllowedPattern: '[a-z]'
    VpcIpv4AddressBlock:
       Description: 'IPv4 address block to assign to the VPC in CIDR format.'
       Type: String
@@ -27,11 +27,6 @@ Parameters:
 Conditions:
    EnableIpv6: !Equals [ !Ref EnableIpv6 , 'yes' ]
 Resources:
-   SourceRepository:
-      Type: 'AWS::CodeCommit::Repository'
-      Properties:
-         RepositoryName: music
-         RepositoryDescription: 'AWS-based music compilation system.'
    Vpc:
       Type: 'AWS::EC2::VPC'
       Properties:
@@ -222,7 +217,7 @@ Resources:
                      -
                         Action:
                            - 'codecommit:GitPull'
-                        Resource: !GetAtt SourceRepository.Arn
+                        Resource: !ImportValue music-SourceRepositoryArn
                         Effect: Allow
             -
                PolicyName: packer
@@ -313,7 +308,7 @@ Resources:
          ServiceRole: !GetAtt VolumeBuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !GetAtt SourceRepository.CloneUrlHttp
+            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-volume.yaml'
          Environment:
@@ -395,7 +390,7 @@ Resources:
                      -
                         Action:
                            - 'codecommit:GitPull'
-                        Resource: !GetAtt SourceRepository.Arn
+                        Resource: !ImportValue music-SourceRepositoryArn
                         Effect: Allow
             -
                PolicyName: packer
@@ -509,7 +504,7 @@ Resources:
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !GetAtt SourceRepository.CloneUrlHttp
+            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-worker.yaml'
          Environment:
@@ -591,7 +586,7 @@ Resources:
                      -
                         Action:
                            - 'codecommit:GitPull'
-                        Resource: !GetAtt SourceRepository.Arn
+                        Resource: !ImportValue music-SourceRepositoryArn
                         Effect: Allow
             -
                PolicyName: packer
@@ -705,7 +700,7 @@ Resources:
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !GetAtt SourceRepository.CloneUrlHttp
+            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-server.yaml'
          Environment:
