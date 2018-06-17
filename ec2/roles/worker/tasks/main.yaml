@@ -8,7 +8,9 @@
   with_items:
      - flac
      - lame
+     - opus-tools
      - tup
+     - vorbis-tools
 - name: Enable full dependency tracking for tup
   file:
      path: /usr/bin/tup
