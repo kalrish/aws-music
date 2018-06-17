@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"instance_type": "t2.nano",
+		"name": "",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
 		"ssh_user": "root",
@@ -16,7 +17,7 @@
 		},
 		{
 			"type": "ansible",
-			"playbook_file": "playbook-server.yaml",
+			"playbook_file": "playbook-{{ user `name` }}.yaml",
 			"groups": [
 				"common"
 			],
@@ -29,12 +30,13 @@
 	"builders": [
 		{
 			"type": "amazon-ebs",
-			"ami_name": "music-server {{ isotime \"2006-01-02-15-04-05\" }}",
+			"ami_name": "music-{{ user `name` }} {{ isotime \"2006-01-02-15-04-05\" }}",
+			"ami_virtualization_type": "hvm",
 			"associate_public_ip_address": false,
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
-				"Packer": "music-server"
+				"Packer": "music-{{ user `name` }}"
 			},
 			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami_filter": {
