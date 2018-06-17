@@ -11,6 +11,13 @@
   filesystem:
      dev: '{{ dev }}'
      fstype: '{{ fs_type }}'
+- name: Create working volume mount point
+  file:
+     path: '{{ mount_point }}'
+     state: directory
+     owner: music
+     group: music
+     mode: u=rw,g=r
 - name: Mount EBS volume
   mount:
      state: mounted
@@ -26,6 +33,11 @@
   copy:
      src: tup.ini
      dest: '{{ mount_point }}/.tup/options'
+  become_user: music
+- name: Upload build code
+  copy:
+     src: tup
+     dest: '{{ mount_point }}'
   become_user: music
 - name: Unmount EBS volume
   mount:

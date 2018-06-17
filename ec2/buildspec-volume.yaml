@@ -4,7 +4,8 @@ version: 0.2
 phases:
    build:
       commands:
+         - ln -Tsr tup ec2/roles/volume/files/tup
          - cd ec2
          - packer build -color=false template-volume.json
          - |
-             aws ssm put-parameter --overwrite --name /music/volume --type String --value "$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)"
+            aws ssm put-parameter --overwrite --name '/music/volume' --type String --value "$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)"

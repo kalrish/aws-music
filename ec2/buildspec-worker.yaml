@@ -11,7 +11,8 @@ phases:
          - cd ec2
         #- echo "${SSH_KEY}" >music-packer.pem
         #- echo chmod 0600 music-packer.pem
+         - mkdir -p 'roles/worker/files'
          - curl -sS -o 'roles/worker/files/get-pip.py' 'https://bootstrap.pypa.io/get-pip.py'
-         - packer build -color=false -var 'name=worker' template-worker.json
+         - packer build -color=false -var 'name=worker' template-ami.json
          - |
             aws ec2 modify-launch-template --launch-template-name "${LAUNCH_TEMPLATE_NAME}" --default-version "$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-name "${LAUNCH_TEMPLATE_NAME}" --source-version "$(aws --query 'LaunchTemplates[0].DefaultVersionNumber' --output text ec2 describe-launch-templates --launch-template-names "${LAUNCH_TEMPLATE_NAME}")" --launch-template-data "{\"ImageId\":\"$(jq -r '.builds[0].artifact_id' manifest.json | cut -d : -f2)\"}")"
