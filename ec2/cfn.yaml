@@ -510,9 +510,9 @@ Resources:
                   Type: PLAINTEXT
                   Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
                -
-                  Name: LAUNCH_TEMPLATE_NAME
+                  Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
-                  Value: music-worker
+                  Value: !Ref WorkerLaunchTemplate
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
