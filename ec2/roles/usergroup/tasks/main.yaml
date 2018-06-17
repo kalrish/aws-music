@@ -12,5 +12,5 @@
      uid: 1013
      group: music
      system: yes
-     home: ''
+     home: '{{ mount_point }}'
      create_home: no
