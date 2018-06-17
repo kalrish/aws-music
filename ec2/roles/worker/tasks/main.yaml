@@ -61,18 +61,24 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-- name: Mount sources volume
+- name: Mount volumes
   mount:
      state: mounted
-     src: '{{ sources_device_name }}'
-     fstype: '{{ sources_fs_type }}'
-     path: '{{ sources_mount_point }}'
-- name: Mount builds volume
-  mount:
-     state: mounted
-     src: '{{ builds_device_name }}'
-     fstype: '{{ builds_fs_type }}'
-     path: '{{ builds_mount_point }}'
+     src: '{{ item.src }}'
+     fstype: '{{ item.fstype }}'
+     opts: '{{ item.opts }}'
+     path: '{{ item.path }}'
+  loop:
+     -
+        src: '{{ sources_device_name }}'
+        fstype: '{{ sources_fs_type }}'
+        opts: 'nodev,noexec,nosuid,data=writeback,noatime'
+        path: '{{ sources_mount_point }}'
+     -
+        src: '{{ builds_device_name }}'
+        fstype: '{{ builds_fs_type }}'
+        opts: 'noexec,nosuid,data=writeback,noatime'
+        path: '{{ builds_mount_point }}'
 - name: Set up git for CodeCommit access
   git_config:
      scope: system

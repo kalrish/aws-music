@@ -4,7 +4,15 @@ Description=Monitor music files for changes
 [Service]
 Type=simple
 ExecStart=/usr/bin/tup monitor
+ExecStop=/usr/bin/tup stop
+#CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
+#AmbientCapabilities=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
+PrivateNetwork=yes
 User=music
 Group=music
 WorkingDirectory={{ work_dir }}
-Restart=on-failure
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
