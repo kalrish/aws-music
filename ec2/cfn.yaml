@@ -128,12 +128,13 @@ Resources:
       Properties:
          ImageId: !Ref BridgeInstanceImageId
          InstanceType: t2.micro
-         KeyName: frontdoor
+         KeyName: music-bridge
          NetworkInterfaces:
             -
                DeviceIndex: 0
                GroupSet:
                   - !GetAtt BridgeInstanceSecurityGroup.GroupId
+                  - !GetAtt NatSecurityGroup.GroupId
                SubnetId: !Ref PublicSubnet
                AssociatePublicIpAddress: true
    PrivateSubnet:
@@ -840,6 +841,7 @@ Resources:
                -
                   DeviceIndex: 0
                   Groups:
+                     - !GetAtt NatSecurityGroup.GroupId
                      - !GetAtt BridgeSecurityGroup.GroupId
                   SubnetId: !Ref PrivateSubnet
                   AssociatePublicIpAddress: false
@@ -856,6 +858,7 @@ Resources:
                -
                   DeviceIndex: 0
                   Groups:
+                     - !GetAtt NatSecurityGroup.GroupId
                      - !GetAtt BridgeSecurityGroup.GroupId
                   SubnetId: !Ref PrivateSubnet
                   AssociatePublicIpAddress: false

@@ -8,6 +8,11 @@ Resources:
          RepositoryDescription: 'AWS-based music compilation system.'
    SourcesBucket:
       Type: 'AWS::S3::Bucket'
+      Properties:
+         Tags:
+            -
+               Key: music
+               Value: sources
 Outputs:
    CodeRepositoryArn:
       Description: 'ARN of the code repository.'
