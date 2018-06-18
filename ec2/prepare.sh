@@ -1,3 +1,6 @@
-#!/bin/sh
+#!/usr/bin/bash
 
-exec pacman --color never --noprogressbar --noconfirm -Sqy python
+
+set -ex
+
+pacman --color never --noprogressbar --noconfirm -Sqy python
