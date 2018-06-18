@@ -65,15 +65,15 @@ Deployment
            
                1.  Copy the volume manager's private key to the bridge. I know this is terrible, but your SSH implementation is even worse by not supporting ProxyCommand.
                
-                   $  scp -i ~/.ssh/music-bridge.pem ~/.ssh/music-volmgr.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}:/music-volmgr.pem
+                    $  scp -i ~/.ssh/music-bridge.pem ~/.ssh/music-volmgr.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}:/music-volmgr.pem
                
                2.  Connect to the bridge.
                
-                   $  ssh -i ~/.ssh/music-bridge.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}
+                    $  ssh -i ~/.ssh/music-bridge.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}
                
                3.  Connect to the volume manager.
                
-                   $  ssh -i /music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
+                    $  ssh -i /music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
       
        5.  Format the volumes with the filesystems of your choice.
       
