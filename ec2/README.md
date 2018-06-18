@@ -53,19 +53,27 @@ Deployment
       
        4.  Connect to the instance.
       
+           First things first:
+           
+               $  BRIDGE_INSTANCE_IP=$(aws --query 'Reservations[0].Instances[0].PublicIpAddress' --output text ec2 describe-instances --instance-ids $BRIDGE_INSTANCE_ID)
+           
            There are two ways to go about this.
            
            -  If your SSH client supports ProxyCommand, use that.
            
            -  If not:
            
-               First we connect to the bridge. The username depends on the distro that the bridge AMI is based on.
+               1.  Copy the volume manager's private key to the bridge. I know this is terrible, but your SSH implementation is even worse by not supporting ProxyCommand.
                
-                   $  ssh -i ~/.ssh/bridge.pem ${USERNAME}@$(aws --query 'Reservations[0].Instances[0].PublicIpAddress' --output text ec2 describe-instances --instance-ids $BRIDGE_INSTANCE_ID)
+                   $  scp -i ~/.ssh/music-bridge.pem ~/.ssh/music-volmgr.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}:/music-volmgr.pem
                
-               Then, from within the SSH session:
+               2.  Connect to the bridge.
                
-                   $  ssh -i ~/.ssh/music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
+                   $  ssh -i ~/.ssh/music-bridge.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}
+               
+               3.  Connect to the volume manager.
+               
+                   $  ssh -i /music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
       
        5.  Format the volumes with the filesystems of your choice.
       
