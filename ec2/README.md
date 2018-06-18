@@ -56,6 +56,7 @@ Deployment
            First things first:
            
                $  BRIDGE_INSTANCE_IP=$(aws --query 'Reservations[0].Instances[0].PublicIpAddress' --output text ec2 describe-instances --instance-ids $BRIDGE_INSTANCE_ID)
+               $  VOLMGR_INSTANCE_IP=$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
            
            There are two ways to go about this.
            
@@ -73,7 +74,7 @@ Deployment
                
                3.  Connect to the volume manager from the bridge.
                
-                       $  ssh -i /music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
+                       $  ssh -i /music-volmgr.pem root@${VOLMGR_INSTANCE_IP}
       
        5.  Format the volumes with the filesystems of your choice.
       
@@ -139,6 +140,12 @@ Deployment
            Choose an instance type with good compute power.
       
       2.  Attach the sources and builds volumes to the instance.
+      
+      3.  Connect to the instance.
+      
+           First things first:
+           
+               $  WORKER_INSTANCE_IP=$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $WORKER_INSTANCE_ID)
       
       3.  Mount the sources volume.
       

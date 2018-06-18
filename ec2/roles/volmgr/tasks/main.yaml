@@ -10,6 +10,7 @@
   with_items:
      - e2fsprogs
      - f2fs-tools
+     - openssh
      - tup
      - xfsprogs
 - name: Download pip installation script

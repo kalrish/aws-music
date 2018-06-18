@@ -83,14 +83,14 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
-   BridgeInstanceSecurityGroupEgress:
-      Type: 'AWS::EC2::SecurityGroupEgress'
-      Properties:
-         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
-         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
-         FromPort: 22
-         ToPort: 22
-         IpProtocol: tcp
+#   BridgeInstanceSecurityGroupEgress:
+#      Type: 'AWS::EC2::SecurityGroupEgress'
+#      Properties:
+#         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
+#         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
+#         FromPort: 22
+#         ToPort: 22
+#         IpProtocol: tcp
    NatSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -112,7 +112,7 @@ Resources:
       Properties:
          ImageId: !Ref NatInstanceImageId
          InstanceType: t2.micro
-         KeyName: nat
+         KeyName: music-nat
          NetworkInterfaces:
             -
                DeviceIndex: 0
