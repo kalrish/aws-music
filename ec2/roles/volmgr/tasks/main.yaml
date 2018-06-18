@@ -23,7 +23,7 @@
      name: awscli
      state: present
 - name: Upload volume preparation scripts
-  template:
+  copy:
      src: 'prepare_volume-{{ item }}.sh'
      dest: '/usr/local/bin/music-prepare_volume-{{ item }}'
      owner: root

@@ -793,6 +793,7 @@ Resources:
                   Resource: !ImportValue music-CodeRepositoryArn
                   Effect: Allow
          Roles:
+            - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref WorkerInstanceRole
             - !Ref ServerAmiBuildRole
