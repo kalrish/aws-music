@@ -83,3 +83,10 @@
      src: tup.ini
      dest: '{{ music_home }}/.tupoptions'
   become_user: music
+- name: Upload profile update script
+  template:
+     src: 'update_profiles.sh'
+     dest: '/usr/local/bin/music-update_profiles'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
