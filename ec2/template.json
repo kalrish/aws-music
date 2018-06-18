@@ -24,7 +24,7 @@
 			],
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-vvv",
+				"-vv",
 				"--extra-vars",
 				"code_repo={{ user `code_repository` }} sources_bucket={{ user `sources_bucket` }}"
 			]

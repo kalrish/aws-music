@@ -35,7 +35,7 @@
 - name: Upload sources bucket name
   template:
      src: 'sources_bucket'
-     dest: '/usr/local/share/music/sources_bucket'
+     dest: '{{ music_home }}/sources_bucket'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
