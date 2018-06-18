@@ -113,7 +113,7 @@ Deployment
       
       11.  Terminate the instance.
       
-           The launch template is configured so that the instance is terminated on OS-initiated shutdown.
+           The launch template is configured so that the instance is terminated on OS-initiated shutdown, so you don't have to terminate it manually through the API.
            
                $  systemctl poweroff
                $  exit
