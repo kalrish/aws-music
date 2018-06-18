@@ -103,30 +103,26 @@ Deployment
            
            You might have to configure your SSH client beforehand. Refer to your SSH client's documentation on how to enable agent forwarding.
       
-       5.  Create the mountpoints for the volumes.
-      
-               $  mkdir -p /mnt/music/{sources,builds}
-      
-       6.  Format the volumes with the filesystems of your choice.
+       5.  Format the volumes with the filesystems of your choice.
       
            Pay attention to the device names, which might be different than the ones we specified when attaching the volumes to the instance.
            
                $  mke2fs -t ext4 /dev/xvdf
                $  mke2fs -t ext4 /dev/xvdg
       
-       7.  Mount the filesystems.
+       6.  Mount the filesystems.
       
                $  mount -t ext4 /dev/xvdf /mnt/music/sources
                $  mount -t ext4 /dev/xvdg /mnt/music/builds
       
-       8.  Prepare the volumes.
+       7.  Prepare the volumes.
       
            The worker and the server systems expect a certain directory hierarchy on the volumes.
            
                $  music-prepare_volume-sources /mnt/music/sources
                $  music-prepare_volume-builds  /mnt/music/builds
       
-       9.  Download the music sources into the sources volume.
+       8.  Download the music sources into the sources volume.
       
                $  aws s3 cp --recursive "s3://$(cat /usr/local/share/music/sources_bucket)" /mnt/music/sources
            
@@ -134,16 +130,16 @@ Deployment
            
                $  aws s3 sync "s3://$(cat /usr/local/share/music/sources_bucket)" /mnt
       
-      10.  Unmount the volumes.
+       9.  Unmount the volumes.
       
                $  umount /mnt/music/{sources,builds}
       
-      11.  Detach the volumes.
+      10.  Detach the volumes.
       
                $  aws ec2 detach-volume --volume-id $SOURCES_VOLUME_ID
                $  aws ec2 detach-volume --volume-id $BUILDS_VOLUME_ID
       
-      12.  Terminate the instance.
+      11.  Terminate the instance.
       
            The launch template is configured so that the instance is terminated on OS-initiated shutdown.
            
@@ -152,7 +148,7 @@ Deployment
            
            Bonus points if you manage to sneak the `exit`.
       
-      13.  Create a snapshot of the volume.
+      12.  Create a snapshot of the volume.
       
            You won't be compiling your music collection too often, so it might be a good idea to delete the sources volume when you're done to save on costs. However, you won't want to re-download your collection, so the in-the-middle solution is to create a snapshot of it.
       
