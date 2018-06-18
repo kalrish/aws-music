@@ -338,6 +338,10 @@ Resources:
             PrivilegedMode: false
             EnvironmentVariables:
                -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: volmgr
+               -
                   Name: INSTANCE_VPC
                   Type: PLAINTEXT
                   Value: !Ref Vpc
@@ -531,13 +535,17 @@ Resources:
             Type: CODECOMMIT
             Location: !ImportValue music-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec-worker.yaml'
+            BuildSpec: 'ec2/buildspec.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
             Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
             PrivilegedMode: false
             EnvironmentVariables:
+               -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: worker
                -
                   Name: INSTANCE_VPC
                   Type: PLAINTEXT
@@ -714,13 +722,17 @@ Resources:
             Type: CODECOMMIT
             Location: !ImportValue music-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec-server.yaml'
+            BuildSpec: 'ec2/buildspec.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
             Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
             PrivilegedMode: false
             EnvironmentVariables:
+               -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: server
                -
                   Name: INSTANCE_VPC
                   Type: PLAINTEXT

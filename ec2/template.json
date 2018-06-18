@@ -3,6 +3,7 @@
 		"code_repository": "{{ env `CODE_REPOSITORY` }}",
 		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.micro",
+		"name": "{{ env `NAME` }}",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
 		"sources_bucket": "{{ env `SOURCES_BUCKET` }}",
@@ -32,14 +33,14 @@
 	"builders": [
 		{
 			"type": "amazon-ebs",
-			"ami_name": "music-{{ build_name }} {{ isotime \"2006-01-02-15-04-05\" }}",
+			"ami_name": "music-{{ user `name` }} {{ isotime \"2006-01-02-15-04-05\" }}",
 			"ami_virtualization_type": "hvm",
 			"associate_public_ip_address": false,
 			"iam_instance_profile": "{{ user `instance_profile` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
-				"Packer": "music-{{ build_name }}"
+				"Packer": "music-{{ user `name` }}"
 			},
 			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami_filter": {
