@@ -71,7 +71,7 @@ Deployment
                
                        $  ssh -i ~/.ssh/music-bridge.pem ${USERNAME}@${BRIDGE_INSTANCE_IP}
                
-               3.  Connect to the volume manager.
+               3.  Connect to the volume manager from the bridge.
                
                        $  ssh -i /music-volmgr.pem root@$(aws --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text ec2 describe-instances --instance-ids $VOLMGR_INSTANCE_ID)
       
@@ -127,16 +127,8 @@ Deployment
                $  SOURCES_SNAPSHOT_ID=$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id $SOURCES_VOLUME_ID --tag-specifications 'ResourceType=snapshot,Tags=[{Key=music,Value=sources}]')
            
            Then, you can re-create the sources volume any time you want without having to pay for an EBS volume.
-  
-  6.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each music profile.
  
-  7.  Upload the settings for each profile to the relevant SSM parameters.
- 
-      Use the CLI for this, because tup.config files contain relevant newlines.
-      
-          $  for PROFILE in flac phone car ; do aws ssm put-parameter --overwrite "/music/profiles/${PROFILE}/config" --type String --value "file://${PROFILE}.config" ; done
- 
-  8.  Compile the music library.
+  6.  Compile the music library.
  
       1.  Launch a worker instance.
       
@@ -187,7 +179,7 @@ Deployment
       
       6.  Stop or terminate the instance.
  
-  9.  Spin up the server.
+  7.  Spin up the server.
  
       1.  Launch a server instance.
       
@@ -199,4 +191,4 @@ Deployment
       
       2.  Attach the builds volume to the instance.
       
- 10.  er
+ 8.  er

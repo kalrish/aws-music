@@ -64,7 +64,7 @@ Resources:
    BridgeInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'For the bridge instance itself.'
+         GroupDescription: 'For bridge instances.'
          SecurityGroupIngress:
             -
                CidrIp: 0.0.0.0/0
@@ -75,7 +75,7 @@ Resources:
    BridgeSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'For the bridge instance to access other instances.'
+         GroupDescription: 'For instances to be accessed by bridge instances.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
@@ -160,12 +160,12 @@ Resources:
    VolmgrAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build container.'
+         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
          VpcId: !Ref Vpc
    VolmgrAmiBuildInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build instance.'
+         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
@@ -325,7 +325,7 @@ Resources:
       Type: 'AWS::CodeBuild::Project'
       Properties:
          Name: music-volmgr-ami
-         Description: 'Build AMI to host music compilation instance.'
+         Description: 'Build AMI to manage music volumes.'
          ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
@@ -375,12 +375,12 @@ Resources:
    WorkerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build container.'
+         GroupDescription: 'For CodeBuild to access worker AMI build instances.'
          VpcId: !Ref Vpc
    WorkerAmiBuildInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build instance.'
+         GroupDescription: 'For worker AMI build instances to be accessed by CodeBuild.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
@@ -541,7 +541,7 @@ Resources:
       Type: 'AWS::CodeBuild::Project'
       Properties:
          Name: music-worker-ami
-         Description: 'Build AMI to host music compilation instance.'
+         Description: 'Build AMI to compile music library.'
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
@@ -595,12 +595,12 @@ Resources:
    ServerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build container.'
+         GroupDescription: 'For CodeBuild to access server AMI build instances.'
          VpcId: !Ref Vpc
    ServerAmiBuildInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music AMI build instance.'
+         GroupDescription: 'For server AMI build instances to be accessed by CodeBuild.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
@@ -728,7 +728,7 @@ Resources:
       Type: 'AWS::CodeBuild::Project'
       Properties:
          Name: music-server-ami
-         Description: 'Build AMI to host music server instance.'
+         Description: 'Build AMI to serve music library.'
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
@@ -876,7 +876,7 @@ Resources:
    ServerInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'Music server instances.'
+         GroupDescription: 'For the server instance to be accessible.'
          SecurityGroupIngress:
             -
                CidrIp: 0.0.0.0/0
