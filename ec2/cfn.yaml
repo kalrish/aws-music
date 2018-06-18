@@ -521,6 +521,17 @@ Resources:
                      Service: 'ec2.amazonaws.com'
                   Action: 'sts:AssumeRole'
                   Effect: Allow
+         Policies:
+            -
+               PolicyName: parameters
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ssm:GetParametersByPath'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/profiles/*'
+                        Effect: Allow
    WorkerInstanceProfile:
       Type: 'AWS::IAM::InstanceProfile'
       Properties:
