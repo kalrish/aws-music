@@ -54,7 +54,7 @@
 #  systemd:
 #     name: music-monitor
 #     enabled: yes
-- name: Create mount points
+- name: Create mount points for volumes
   file:
      path: '{{ item }}'
      state: directory

@@ -32,10 +32,27 @@
   with_items:
      - sources
      - builds
+- name: Create /usr/local/share/music folder
+  file:
+     path: /usr/local/share/music
+     state: directory
+     owner: music
+     group: music
+     mode: u=rw,g=rw,o=r
 - name: Upload sources bucket name
   template:
      src: 'sources_bucket'
-     dest: '{{ music_home }}/sources_bucket'
+     dest: '/usr/local/share/music/sources_bucket'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
+- name: Create mount points for volumes
+  file:
+     path: '/mnt/music/{{ item }}'
+     state: directory
+     owner: root
+     group: root
+     mode: 0000
+  with_items:
+     - sources
+     - builds

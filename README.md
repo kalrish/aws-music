@@ -128,7 +128,7 @@ Deployment
       
        9.  Download the music sources into the sources volume.
       
-               $  aws s3 cp --recursive "s3://$(cat /var/opt/music/sources_bucket)" /mnt/music/sources
+               $  aws s3 cp --recursive "s3://$(cat /usr/local/share/music/sources_bucket)" /mnt/music/sources
            
            Should the command fail part-way, you can restart the process where it was left:
            
