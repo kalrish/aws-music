@@ -1,5 +1,5 @@
 ---
-- name: Provision worker AMI
+- name: Provision volume manager AMI
   hosts: all
   roles:
      - volmgr

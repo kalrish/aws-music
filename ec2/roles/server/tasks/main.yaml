@@ -1,4 +1,5 @@
 ---
+- import_tasks: music-user.yaml
 - name: Update system and install required packages
   pacman:
      name: '{{ item }}'

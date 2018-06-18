@@ -3,13 +3,13 @@
   group:
      name: music
      state: present
-     gid: '{{ gid }}'
+     gid: '{{ music_gid }}'
      system: yes
 - name: Create working user
   user:
      name: music
      state: present
-     uid: '{{ uid }}'
+     uid: '{{ music_uid }}'
      group: music
      system: yes
      home: '{{ music_home }}'

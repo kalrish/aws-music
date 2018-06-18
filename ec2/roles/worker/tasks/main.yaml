@@ -1,4 +1,5 @@
 ---
+- import_tasks: music-user.yaml
 - name: Update system software
   pacman:
      update_cache: yes
