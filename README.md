@@ -1,7 +1,29 @@
 #  AWS-based music compilation system
 
 
-##  Deployment
+Resources
+--------------------------------------------------------------------------------
+
+###  AMIs
+
+| AMI name       | Contents
+| -------------- | ----------
+| music-volmgr   |
+| music-worker   |
+| music-server   |
+
+####  Volume manager
+The volume manager AMI contains the tools required to manage the filesystems supported by Arch as well as the AWS CLI, which is used to download the music sources from the S3 bucket.
+
+####  Worker
+The worker AMI contains tup, the build system used to orchestrate the build process, the encoders supported by the build code and the tools required to mount the filesystems.
+
+####  Server
+The server AMI contains rsync as.
+
+
+Deployment
+--------------------------------------------------------------------------------
 
   1.  Clone this repository.
  
@@ -47,13 +69,14 @@
       
       Since the bridge instance doesn't have to do any real processing, you're free to choose the cheapest instance type.
  
-  9.  Create the sources volume:
+  9.  Create the volumes.
  
-       1.  Create an EBS volume of appropriate size.
+       1.  Create EBS volumes of appropriate size to hold the music sources and the build artifacts, respectively.
       
-           We will save the ID of the volume.
+           We will save the ID of the volumes.
            
-               $  SOURCES_VOLUME_ID=$(aws --query 'VolumeId' --output text ec2 create-volume --availability-zone $AVAILABILITY_ZONE $ANY_OTHER_OPTIONS)
+               $  SOURCES_VOLUME_ID=$(aws --query 'VolumeId' --output text ec2 create-volume --availability-zone $AVAILABILITY_ZONE --tag-specifications 'ResourceType=snapshot,Tags=[{Key=music,Value=sources}]') $ANY_OTHER_OPTIONS)
+               $  BUILDS_VOLUME_ID=$(aws --query 'VolumeId' --output text ec2 create-volume --availability-zone $AVAILABILITY_ZONE --tag-specifications 'ResourceType=snapshot,Tags=[{Key=music,Value=builds}]') $ANY_OTHER_OPTIONS)
       
        2.  Launch an EC2 instance based on the volume manager AMI.
       
@@ -61,13 +84,12 @@
            
                $  VOLMGR_INSTANCE_ID=$(aws --output text --query 'Instances[*].InstanceId' ec2 run-instances --launch-template LaunchTemplateName=music-volmgr --instance-type t2.micro)
            
-           Since the instance will be used to download the entire music sources into the volume, which might take a long time, you should pick a cheap instance type.
+           Since the instance will be used to download the entire music sources into the volume, which might take a long time, you should pick a cheap instance type with good network bandwidth.
       
-       3.  Attach the volume to the instance.
-      
-           With the following command:
+       3.  Attach the volumes to the instance.
            
                $  aws ec2 attach-volume --volume-id $SOURCES_VOLUME_ID --instance-id $VOLMGR_INSTANCE_ID --device /dev/xvdf
+               $  aws ec2 attach-volume --volume-id $BUILDS_VOLUME_ID  --instance-id $VOLMGR_INSTANCE_ID --device /dev/xvdg
       
        4.  Connect into the instance through the SSH bridge.
       
@@ -81,35 +103,56 @@
            
            You might have to configure your SSH client beforehand. Refer to your SSH client's documentation on how to enable agent forwarding.
       
-       6.  Format the volume with the filesystem of your choice.
+       5.  Create the mountpoints for the volumes.
       
-           Pay attention to the device name, which might be different than the one we specified when attaching the volume to the instance.
+               $  mkdir -p /mnt/music/{sources,builds}
+      
+       6.  Format the volumes with the filesystems of your choice.
+      
+           Pay attention to the device names, which might be different than the ones we specified when attaching the volumes to the instance.
            
                $  mke2fs -t ext4 /dev/xvdf
+               $  mke2fs -t ext4 /dev/xvdg
       
-       7.  Mount the filesystem.
+       7.  Mount the filesystems.
       
-               $  mount -t ext4 /dev/xvdf /mnt
+               $  mount -t ext4 /dev/xvdf /mnt/music/sources
+               $  mount -t ext4 /dev/xvdg /mnt/music/builds
       
-       8.  Download the music sources into the volume.
+       8.  Prepare the volumes.
       
-               $  aws s3 sync "s3://$(aws --query 'Parameter.Value' --output text ssm get-parameter --name /music/sources)" /mnt
+           The worker and the server systems expect a certain directory hierarchy on the volumes.
+           
+               $  music-prepare_volume-sources /mnt/music/sources
+               $  music-prepare_volume-builds  /mnt/music/builds
       
-       9.  Unmount the filesystem.
+       9.  Download the music sources into the sources volume.
       
-               $  umount /mnt
+               $  aws s3 cp --recursive "s3://$(cat /usr/local/share/music/sources_bucket)" /mnt/music/sources
+           
+           Should the command fail part-way, you can restart the process where it was left:
+           
+               $  aws s3 sync "s3://$(cat /usr/local/share/music/sources_bucket)" /mnt
       
-      10.  Detach the volume.
+      10.  Unmount the volumes.
+      
+               $  umount /mnt/music/{sources,builds}
+      
+      11.  Detach the volumes.
       
                $  aws ec2 detach-volume --volume-id $SOURCES_VOLUME_ID
+               $  aws ec2 detach-volume --volume-id $BUILDS_VOLUME_ID
       
-      11.  Terminate the instance.
+      12.  Terminate the instance.
       
-           First exit the SSH session to close the connection. Then, terminate the instance:
+           The launch template is configured so that the instance is terminated on OS-initiated shutdown.
            
-               $  aws ec2 terminate-instances --ids $VOLMGR_INSTANCE_ID
+               $  systemctl poweroff
+               $  exit
+           
+           Bonus points if you manage to sneak the `exit`.
       
-      12.  Create a snapshot of the volume.
+      13.  Create a snapshot of the volume.
       
            You won't be compiling your music collection too often, so it might be a good idea to delete the sources volume when you're done to save on costs. However, you won't want to re-download your collection, so the in-the-middle solution is to create a snapshot of it.
       

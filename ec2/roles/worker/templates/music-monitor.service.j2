@@ -1,15 +1,15 @@
 [Unit]
-Description=Monitor music files for changes
+Description=Monitor music build dependencies for changes
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/tup monitor
 ExecStop=/usr/bin/tup stop
+User=music
+Group=music
 #CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
 #AmbientCapabilities=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
 PrivateNetwork=yes
-User=music
-Group=music
 WorkingDirectory={{ work_dir }}
 StandardOutput=journal+console
 StandardError=journal+console

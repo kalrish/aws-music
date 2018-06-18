@@ -123,19 +123,19 @@ Resources:
                AssociatePublicIpAddress: true
          SourceDestCheck: false
       DependsOn: InternetGatewayAttachment
-   #BridgeInstance:
-   #   Type: 'AWS::EC2::Instance'
-   #   Properties:
-   #      ImageId: !Ref BridgeInstanceImageId
-   #      InstanceType: t2.micro
-   #      KeyName: frontdoor
-   #      NetworkInterfaces:
-   #         -
-   #            DeviceIndex: 0
-   #            GroupSet:
-   #               - !GetAtt BridgeInstanceSecurityGroup.GroupId
-   #            SubnetId: !Ref PublicSubnet
-   #            AssociatePublicIpAddress: true
+   BridgeInstance:
+      Type: 'AWS::EC2::Instance'
+      Properties:
+         ImageId: !Ref BridgeInstanceImageId
+         InstanceType: t2.micro
+         KeyName: frontdoor
+         NetworkInterfaces:
+            -
+               DeviceIndex: 0
+               GroupSet:
+                  - !GetAtt BridgeInstanceSecurityGroup.GroupId
+               SubnetId: !Ref PublicSubnet
+               AssociatePublicIpAddress: true
    PrivateSubnet:
       Type: 'AWS::EC2::Subnet'
       Properties:
@@ -156,6 +156,217 @@ Resources:
       Properties:
          RouteTableId: !Ref PrivateRouteTable
          SubnetId: !Ref PrivateSubnet
+   VolmgrAmiBuildContainerSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'Music AMI build container.'
+         VpcId: !Ref Vpc
+   VolmgrAmiBuildInstanceSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'Music AMI build instance.'
+         SecurityGroupIngress:
+            -
+               SourceSecurityGroupId: !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+               FromPort: 22
+               ToPort: 22
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
+   VolmgrAmiBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'music-volmgr'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateTags'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeInstances'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'music-volmgr'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
+                        Effect: Allow
+   VolmgrAmiBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolmgrAmiBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref VolmgrAmiBuildRole
+   VolmgrInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: sources
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 's3:ListBucket'
+                        Resource: !ImportValue music-SourcesBucketArn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 's3:GetObject'
+                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
+                        Effect: Allow
+   VolmgrInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref VolmgrInstanceRole
+   VolmgrAmiBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: music-volmgr-ami
+         Description: 'Build AMI to host music compilation instance.'
+         ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
+         Source:
+            Type: CODECOMMIT
+            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'ec2/buildspec.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref PrivateSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${NatSecurityGroup.GroupId},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: SOURCES_BUCKET
+                  Type: PLAINTEXT
+                  Value: !ImportValue music-SourcesBucket
+               -
+                  Name: LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref VolmgrLaunchTemplate
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref PrivateSubnet
+            SecurityGroupIds:
+               - !GetAtt NatSecurityGroup.GroupId
+               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
    WorkerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -305,22 +516,6 @@ Resources:
                      Service: 'ec2.amazonaws.com'
                   Action: 'sts:AssumeRole'
                   Effect: Allow
-         Policies:
-            -
-               PolicyName: sources
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 's3:ListBucket'
-                        Resource: !ImportValue music-SourcesBucketArn
-                        Effect: Allow
-                     -
-                        Action:
-                           - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
-                        Effect: Allow
    WorkerInstanceProfile:
       Type: 'AWS::IAM::InstanceProfile'
       Properties:
@@ -364,10 +559,6 @@ Resources:
                   Type: PLAINTEXT
                   Value: !ImportValue music-CodeRepositoryCloneUrlHttp
                -
-                  Name: SOURCES_BUCKET
-                  Type: PLAINTEXT
-                  Value: !ImportValue music-SourcesBucket
-               -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
                   Value: !Ref WorkerLaunchTemplate
@@ -380,6 +571,7 @@ Resources:
                - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
    ServerAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -558,6 +750,7 @@ Resources:
                - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
    EcrPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
@@ -591,7 +784,7 @@ Resources:
             - !Ref WorkerAmiBuildRole
             - !Ref WorkerInstanceRole
             - !Ref ServerAmiBuildRole
-   Ec2CodeBuildPolicy:
+   CodeBuildVpcPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
          PolicyName: codebuild-vpc
@@ -619,8 +812,25 @@ Resources:
                         ec2:AuthorizedService: 'codebuild.amazonaws.com'
                   Effect: Allow
          Roles:
+            - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
+   VolmgrLaunchTemplate:
+      Type: 'AWS::EC2::LaunchTemplate'
+      Properties:
+         LaunchTemplateName: music-volmgr
+         LaunchTemplateData:
+            IamInstanceProfile:
+               Arn: !GetAtt VolmgrInstanceProfile.Arn
+            KeyName: music-volmgr
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups:
+                     - !GetAtt BridgeSecurityGroup.GroupId
+                  SubnetId: !Ref PrivateSubnet
+                  AssociatePublicIpAddress: false
+            InstanceInitiatedShutdownBehavior: terminate
    WorkerLaunchTemplate:
       Type: 'AWS::EC2::LaunchTemplate'
       Properties:

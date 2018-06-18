@@ -6,14 +6,8 @@ Resources:
       Properties:
          RepositoryName: music
          RepositoryDescription: 'AWS-based music compilation system.'
-   SourceBucket:
+   SourcesBucket:
       Type: 'AWS::S3::Bucket'
-   Parameter:
-      Type: 'AWS::SSM::Parameter'
-      Properties:
-         Name: !Sub '/music/sources'
-         Type: String
-         Value: !Ref SourceBucket
 Outputs:
    CodeRepositoryArn:
       Description: 'ARN of the code repository.'
@@ -27,11 +21,11 @@ Outputs:
          Name: music-CodeRepositoryCloneUrlHttp
    SourcesBucket:
       Description: 'Name of the source bucket.'
-      Value: !Ref SourceBucket
+      Value: !Ref SourcesBucket
       Export:
          Name: music-SourcesBucket
    SourcesBucketArn:
       Description: 'ARN of the source bucket.'
-      Value: !GetAtt SourceBucket.Arn
+      Value: !GetAtt SourcesBucket.Arn
       Export:
          Name: music-SourcesBucketArn

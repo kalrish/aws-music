@@ -39,12 +39,6 @@
   file:
      path: /usr/bin/tup
      mode: +s
-- name: Install pip
-  script: get-pip.py
-- name: Install AWS CLI
-  pip:
-     name: awscli
-     state: present
 - name: Upload systemd service units
   template:
      src: 'music-{{ item }}.service.j2'
@@ -55,12 +49,10 @@
   with_items:
      - build
      - monitor
-     - snapshot
-     - sync
-- name: Enable tup monitor service
-  systemd:
-     name: music-monitor
-     enabled: yes
+#- name: Enable tup monitor service
+#  systemd:
+#     name: music-monitor
+#     enabled: yes
 - name: Create mount points
   file:
      path: '{{ item }}'
@@ -71,13 +63,6 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-- name: Create OverlayFS workdir
-  file:
-     path: '{{ builds_mount_point }}/.overlayfs'
-     state: directory
-     owner: root
-     group: root
-     mode: u=rwx,g=rwx,o=rx
 - name: Create OverlayFS mount point
   file:
      path: '{{ work_dir }}'
@@ -87,37 +72,13 @@
      mode: u=rwx,g=rwx,o=rx
 - name: Set up work directory
   mount:
-     state: mounted
+     state: present
      src: overlay
      fstype: overlay
      opts: 'lowerdir={{ sources_mount_point }}:{{ code_dir }}/tup:{{ profiles_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
      path: '{{ work_dir }}'
-
-#- name: Mount volumes
-#  mount:
-#     state: mounted
-#     src: '{{ item.src }}'
-#     fstype: '{{ item.fstype }}'
-#     opts: '{{ item.opts }}'
-#     path: '{{ item.path }}'
-#  loop:
-#     -
-#        src: '{{ sources_device_name }}'
-#        fstype: '{{ sources_fs_type }}'
-#        opts: 'nodev,noexec,nosuid,data=writeback,noatime'
-#        path: '{{ sources_mount_point }}'
-#     -
-#        src: '{{ builds_device_name }}'
-#        fstype: '{{ builds_fs_type }}'
-#        opts: 'noexec,nosuid,data=writeback,noatime'
-#        path: '{{ builds_mount_point }}'
-#- name: Initialize tup database
-#  command: tup init
-#  args:
-#     chdir: '{{ work_dir }}'
-#  become_user: music
-#- name: Upload tup settings for music project
-#  copy:
-#     src: tup.ini
-#     dest: '{{ work_dir }}/.tup/options'
-#  become_user: music
+- name: Upload tup settings
+  copy:
+     src: tup.ini
+     dest: '{{ music_home }}/.tupoptions'
+  become_user: music

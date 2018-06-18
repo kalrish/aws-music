@@ -12,5 +12,5 @@
      uid: '{{ uid }}'
      group: music
      system: yes
-     home: '/'
-     create_home: no
+     home: '{{ music_home }}'
+     create_home: yes

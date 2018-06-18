@@ -6,4 +6,7 @@ Type=oneshot
 ExecStart=/usr/bin/tup
 User=music
 Group=music
+PrivateNetwork=yes
 WorkingDirectory={{ work_dir }}
+StandardOutput=journal+console
+StandardError=journal+console

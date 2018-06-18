@@ -1,2 +1,2 @@
 ---
-builds_fs_type: ext4
+music_home: /var/opt/music
