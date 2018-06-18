@@ -89,7 +89,7 @@ Deployment
       
        7.  Prepare the volumes.
       
-           The worker and the server systems expect a certain directory hierarchy on the volumes.
+           The worker and server systems expect a certain directory hierarchy on the volumes. The volume manager AMI contains scripts to prepare.
            
                $  music-prepare_volume-sources /mnt/music/sources
                $  music-prepare_volume-builds  /mnt/music/builds
