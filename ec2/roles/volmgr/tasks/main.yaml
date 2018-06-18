@@ -36,8 +36,8 @@
   file:
      path: /usr/local/share/music
      state: directory
-     owner: music
-     group: music
+     owner: root
+     group: root
      mode: u=rw,g=rw,o=r
 - name: Upload sources bucket name
   template:
