@@ -29,9 +29,9 @@ Deployment
  
           $  git clone https://github.com/kalrish/aws-music.git
  
-  2.  Deploy a new CloudFormation stack based on `cfn/main.yaml`.
+  2.  Deploy a new CloudFormation stack based on the `cfn/main.yaml` template.
  
-  3.  Deploy a new CloudFormation stack based on `ec2/cfn.yaml`.
+  3.  Deploy a new CloudFormation stack based on the `ec2/cfn.yaml` template.
  
   4.  Push the code to your newly-created repository.
  
@@ -160,7 +160,7 @@ Deployment
            
            Then, you can re-create the sources volume any time you want without having to pay for an EBS volume.
   
- 10.  Deploy a new CloudFormation stack based on `cfn/profile.yaml` for each music profile.
+ 10.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each music profile.
  
  11.  Upload the settings for each profile to the relevant SSM parameters.
  
