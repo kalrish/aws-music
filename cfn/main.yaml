@@ -1,31 +1,37 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-   SourceBucket:
-      Type: 'AWS::S3::Bucket'
-   SourceRepository:
+   CodeRepository:
       Type: 'AWS::CodeCommit::Repository'
       Properties:
          RepositoryName: music
          RepositoryDescription: 'AWS-based music compilation system.'
-Outputs:
    SourceBucket:
+      Type: 'AWS::S3::Bucket'
+   Parameter:
+      Type: 'AWS::SSM::Parameter'
+      Properties:
+         Name: !Sub '/music/sources'
+         Type: String
+         Value: !Ref SourceBucket
+Outputs:
+   CodeRepositoryArn:
+      Description: 'ARN of the code repository.'
+      Value: !GetAtt CodeRepository.Arn
+      Export:
+         Name: music-CodeRepositoryArn
+   CodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the code repository.'
+      Value: !GetAtt CodeRepository.CloneUrlHttp
+      Export:
+         Name: music-CodeRepositoryCloneUrlHttp
+   SourcesBucket:
       Description: 'Name of the source bucket.'
       Value: !Ref SourceBucket
       Export:
-         Name: music-SourceBucket
-   SourceBucketArn:
+         Name: music-SourcesBucket
+   SourcesBucketArn:
       Description: 'ARN of the source bucket.'
       Value: !GetAtt SourceBucket.Arn
       Export:
-         Name: music-SourceBucketArn
-   SourceRepositoryArn:
-      Description: 'ARN of the source repository.'
-      Value: !GetAtt SourceRepository.Arn
-      Export:
-         Name: music-SourceRepositoryArn
-   SourceRepositoryCloneUrlHttp:
-      Description: 'HTTP clone URL of the source repository.'
-      Value: !GetAtt SourceRepository.CloneUrlHttp
-      Export:
-         Name: music-SourceRepositoryCloneUrlHttp
+         Name: music-SourcesBucketArn

@@ -1,0 +1,19 @@
+---
+- name: Update system software
+  pacman:
+     update_cache: yes
+     upgrade: yes
+- name: Install required packages
+  pacman:
+     name: '{{ item }}'
+     state: present
+  with_items:
+     - e2fsprogs
+     - f2fs-tools
+     - xfsprogs
+- name: Install pip
+  script: get-pip.py
+- name: Install AWS CLI
+  pip:
+     name: awscli
+     state: present

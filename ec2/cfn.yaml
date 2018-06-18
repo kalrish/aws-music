@@ -1,10 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
-   AvailabilityZone:
-      Description: 'Availability zone in which to create EC2 resources.'
-      Type: String
-      AllowedPattern: '[a-z]'
    VpcIpv4AddressBlock:
       Description: 'IPv4 address block to assign to the VPC in CIDR format.'
       Type: String
@@ -47,7 +43,6 @@ Resources:
    PublicSubnet:
       Type: 'AWS::EC2::Subnet'
       Properties:
-         AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
          CidrBlock: !Select [ 1, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
          VpcId: !Ref Vpc
    PublicRouteTable:
@@ -144,7 +139,6 @@ Resources:
    PrivateSubnet:
       Type: 'AWS::EC2::Subnet'
       Properties:
-         AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
          CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
          VpcId: !Ref Vpc
    PrivateRouteTable:
@@ -320,12 +314,12 @@ Resources:
                      -
                         Action:
                            - 's3:ListBucket'
-                        Resource: !ImportValue music-SourceBucketArn
+                        Resource: !ImportValue music-SourcesBucketArn
                         Effect: Allow
                      -
                         Action:
                            - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourceBucketArn, '*' ] ]
+                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
                         Effect: Allow
    WorkerInstanceProfile:
       Type: 'AWS::IAM::InstanceProfile'
@@ -340,7 +334,7 @@ Resources:
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
+            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-worker.yaml'
          Environment:
@@ -368,11 +362,11 @@ Resources:
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
-                  Value: !ImportValue music-SourceRepositoryCloneUrlHttp
+                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
                -
                   Name: SOURCES_BUCKET
                   Type: PLAINTEXT
-                  Value: !ImportValue music-SourceBucket
+                  Value: !ImportValue music-SourcesBucket
                -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
@@ -526,7 +520,7 @@ Resources:
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
+            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec-server.yaml'
          Environment:
@@ -550,7 +544,7 @@ Resources:
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
-                  Value: !ImportValue music-SourceRepositoryCloneUrlHttp
+                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
                -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
@@ -591,7 +585,7 @@ Resources:
                -
                   Action:
                      - 'codecommit:GitPull'
-                  Resource: !ImportValue music-SourceRepositoryArn
+                  Resource: !ImportValue music-CodeRepositoryArn
                   Effect: Allow
          Roles:
             - !Ref WorkerAmiBuildRole

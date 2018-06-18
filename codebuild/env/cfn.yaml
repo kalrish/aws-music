@@ -14,6 +14,16 @@ Resources:
                   Effect: Allow
          Policies:
             -
+               PolicyName: codecommit-pull
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'codecommit:GitPull'
+                        Resource: !ImportValue music-CodeRepositoryArn
+                        Effect: Allow
+            -
                PolicyName: ecr-push
                PolicyDocument:
                   Version: '2012-10-17'
@@ -109,7 +119,7 @@ Resources:
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
             Type: CODECOMMIT
-            Location: !ImportValue music-SourceRepositoryCloneUrlHttp
+            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'codebuild/env/buildspec.yaml'
          Environment:

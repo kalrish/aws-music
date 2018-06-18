@@ -17,6 +17,24 @@
      - tup
      - vorbis-tools
      - xfsprogs
+- name: Set up git for CodeCommit access
+  git_config:
+     scope: system
+     name: '{{ item.name }}'
+     value: '{{ item.value }}'
+  loop:
+     -
+        name: credential.helper
+        value: '!aws codecommit credential-helper $@'
+     -
+        name: credential.UseHttpPath
+        value: true
+- name: Download build code
+  git:
+     repo: '{{ code_repo }}'
+     dest: '{{ code_dir }}'
+     clone: yes
+  become_user: music
 - name: Enable full dependency tracking for tup
   file:
      path: /usr/bin/tup
@@ -43,14 +61,6 @@
   systemd:
      name: music-monitor
      enabled: yes
-- name: Format sources volume
-  filesystem:
-     dev: '{{ sources_device_name }}'
-     fstype: '{{ sources_fs_type }}'
-- name: Format builds volume
-  filesystem:
-     dev: '{{ builds_device_name }}'
-     fstype: '{{ builds_fs_type }}'
 - name: Create mount points
   file:
      path: '{{ item }}'
@@ -61,42 +71,6 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-- name: Mount volumes
-  mount:
-     state: mounted
-     src: '{{ item.src }}'
-     fstype: '{{ item.fstype }}'
-     opts: '{{ item.opts }}'
-     path: '{{ item.path }}'
-  loop:
-     -
-        src: '{{ sources_device_name }}'
-        fstype: '{{ sources_fs_type }}'
-        opts: 'nodev,noexec,nosuid,data=writeback,noatime'
-        path: '{{ sources_mount_point }}'
-     -
-        src: '{{ builds_device_name }}'
-        fstype: '{{ builds_fs_type }}'
-        opts: 'noexec,nosuid,data=writeback,noatime'
-        path: '{{ builds_mount_point }}'
-- name: Set up git for CodeCommit access
-  git_config:
-     scope: system
-     name: '{{ item.name }}'
-     value: '{{ item.value }}'
-  loop:
-     -
-        name: credential.helper
-        value: '!aws codecommit credential-helper $@'
-     -
-        name: credential.UseHttpPath
-        value: true
-- name: Download build code
-  git:
-     repo: '{{ code_repo }}'
-     dest: '{{ code_dir }}'
-     clone: yes
-  become_user: music
 - name: Create OverlayFS workdir
   file:
      path: '{{ builds_mount_point }}/.overlayfs'
@@ -104,7 +78,7 @@
      owner: root
      group: root
      mode: u=rwx,g=rwx,o=rx
-- name: Create work directory
+- name: Create OverlayFS mount point
   file:
      path: '{{ work_dir }}'
      state: directory
@@ -118,20 +92,32 @@
      fstype: overlay
      opts: 'lowerdir={{ sources_mount_point }}:{{ code_dir }}/tup:{{ profiles_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
      path: '{{ work_dir }}'
-- name: Initialize tup database
-  command: tup init
-  args:
-     chdir: '{{ work_dir }}'
-  become_user: music
-- name: Upload tup settings for music project
-  copy:
-     src: tup.ini
-     dest: '{{ work_dir }}/.tup/options'
-  become_user: music
-- name: Unmount volumes
-  mount:
-     state: unmounted
-     path: '{{ item }}'
-  with_items:
-     - '{{ sources_mount_point }}'
-     - '{{ builds_mount_point }}'
+
+#- name: Mount volumes
+#  mount:
+#     state: mounted
+#     src: '{{ item.src }}'
+#     fstype: '{{ item.fstype }}'
+#     opts: '{{ item.opts }}'
+#     path: '{{ item.path }}'
+#  loop:
+#     -
+#        src: '{{ sources_device_name }}'
+#        fstype: '{{ sources_fs_type }}'
+#        opts: 'nodev,noexec,nosuid,data=writeback,noatime'
+#        path: '{{ sources_mount_point }}'
+#     -
+#        src: '{{ builds_device_name }}'
+#        fstype: '{{ builds_fs_type }}'
+#        opts: 'noexec,nosuid,data=writeback,noatime'
+#        path: '{{ builds_mount_point }}'
+#- name: Initialize tup database
+#  command: tup init
+#  args:
+#     chdir: '{{ work_dir }}'
+#  become_user: music
+#- name: Upload tup settings for music project
+#  copy:
+#     src: tup.ini
+#     dest: '{{ work_dir }}/.tup/options'
+#  become_user: music

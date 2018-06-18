@@ -1,0 +1,5 @@
+---
+- name: Provision worker AMI
+  hosts: all
+  roles:
+     - volmgr

@@ -33,24 +33,10 @@
 	],
 	"builders": [
 		{
-			"name": "worker",
 			"type": "amazon-ebs",
-			"ami_block_device_mappings": [
-				{
-					"device_name": "{{ user `sources_device_name` }}",
-					"volume_size": 2,
-					"volume_type": "gp2"
-				},
-				{
-					"device_name": "{{ user `builds_device_name` }}",
-					"volume_size": 1,
-					"volume_type": "gp2"
-				}
-			],
 			"ami_name": "music-{{ build_name }} {{ isotime \"2006-01-02-15-04-05\" }}",
 			"ami_virtualization_type": "hvm",
 			"associate_public_ip_address": false,
-			"iam_instance_profile": "{{ user `instance_profile` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
