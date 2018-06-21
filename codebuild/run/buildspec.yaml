@@ -12,6 +12,10 @@ phases:
          - tup build
          - rm -- build/tup.config
 
+cache:
+   paths:
+      - 'codebuild/run/build/**/*'
+
 artifacts:
    base-directory: codebuild/run/build/build
    files:
