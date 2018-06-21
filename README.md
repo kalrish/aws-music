@@ -1,4 +1,5 @@
-#  AWS-based music compilation system
+AWS-based music compilation system
+================================================================================
 
 
 What is this?
@@ -26,12 +27,12 @@ Deployment
  
  4.  Upload your music sources to the source bucket.
  
-         $  aws s3 sync /path/to/music/sources "s3://$(aws --query 'Parameter.Value' --output text ssm get-parameter --name /music/sources)"
+         $  aws s3 sync /path/to/music/sources "s3://$(aws --query 'Parameter.Value' --output text ssm get-parameter --name /vibes/sources)"
  
- 5.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each music profile.
+ 5.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each profile.
  
- 6.  Upload the settings for each profile to the relevant SSM parameters.
- 
-     Use the CLI for this, because tup.config files contain relevant newlines. For example:
+     The tup configuration may be entered directly or uploaded using the AWS CLI:
      
-         $  for PROFILE in flac phone car ; do aws ssm put-parameter --overwrite "/music/profiles/${PROFILE}/config" --type String --value "file://${PROFILE}.config" ; done
+         $  aws ssm put-parameter --overwrite --name "/vibes/profiles/${PROFILE}" --type String --value "file://${PROFILE}.config"
+ 
+ 6.  Continue with the instructions specific to the implementation of your choice.

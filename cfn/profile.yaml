@@ -5,7 +5,7 @@ Parameters:
       Description: 'Name of the profile.'
       Type: String
    Config:
-      Description: 'Tup configuration associated to the profile.'
+      Description: 'Tup configuration associated to the profile. A comma-delimited list in which each element represents a line in the tup.config file.'
       Type: CommaDelimitedList
 Resources:
    ConfigParameter:

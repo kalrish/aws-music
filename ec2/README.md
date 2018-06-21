@@ -1,4 +1,7 @@
-#  EC2 implementation
+EC2 implementation
+================================================================================
+
+This implementation is based on EC2 and provides much more flexibility, albeit with greater complexity, than the CodeBuild one. It comprises a VPC with a private and a public subnet, two EBS volumes to contain a copy of the sources and the compressed files, respectively, and various instances performing different tasks. The output is made available through servers via a variety of protocols.
 
 
 Deployment
