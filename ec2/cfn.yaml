@@ -5,907 +5,912 @@ Parameters:
       Description: 'IPv4 address block to assign to the VPC in CIDR format.'
       Type: String
       AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-   EnableIpv6:
-      Description: 'Whether to assign an IPv6 address block to the VPC and the subnets.'
-      Type: String
-      AllowedValues:
-         - yes
-         - no
-      Default: 'yes'
    NatInstanceType:
       Description: 'Type of the NAT instance.'
       Type: String
+      Default: t2.medium
    NatInstanceImageId:
       Description: 'AMI ID to base the NAT instance on.'
       Type: 'AWS::EC2::Image::Id'
-   CodeOrigin:
+   NatInstanceKeyName:
+      Description: 'Name of the keypair to assign to the NAT instance.'
+      Type: String
+   CodeRepositoryLocation:
       Description: 'Location of the build code.'
       Type: String
       AllowedValues:
          - GitHub
          - CodeCommit
-Conditions:
-   EnableIpv6: !Equals [ !Ref EnableIpv6 , 'yes' ]
-   CodeOriginCodeCommit: !Equals [ !Ref CodeOrigin , 'CodeCommit' ]
+      Default: GitHub
 Mappings:
-   CodeOriginMap:
-      Type:
+   CodeRepositoryMap:
+      Location:
          GitHub: GITHUB
          CodeCommit: CODECOMMIT
-      Location:
-         GitHub: 'https://github.com/kalrish/aws-vibes.git'
-         CodeCommit: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+Conditions:
+   CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
    Vpc:
       Type: 'AWS::EC2::VPC'
       Properties:
          CidrBlock: !Ref VpcIpv4AddressBlock
    VpcIpv6AddressBlock:
-      Condition: EnableIpv6
       Type: 'AWS::EC2::VPCCidrBlock'
       Properties:
          AmazonProvidedIpv6CidrBlock: true
          VpcId: !Ref Vpc
-   InternetGateway:
-      Type: 'AWS::EC2::InternetGateway'
-   InternetGatewayAttachment:
-      Type: 'AWS::EC2::VPCGatewayAttachment'
-      Properties:
-         InternetGatewayId: !Ref InternetGateway
-         VpcId: !Ref Vpc
-   PublicSubnet:
-      Type: 'AWS::EC2::Subnet'
-      Properties:
-         CidrBlock: !Select [ 1, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
-         VpcId: !Ref Vpc
-   PublicRouteTable:
-      Type: 'AWS::EC2::RouteTable'
-      Properties:
-         VpcId: !Ref Vpc
-   InternetRoute:
-      Type: 'AWS::EC2::Route'
-      Properties:
-         RouteTableId: !Ref PublicRouteTable
-         GatewayId: !Ref InternetGateway
-         DestinationCidrBlock: '0.0.0.0/0'
-      DependsOn: InternetGatewayAttachment
-   PublicRouteTableAssociation:
-      Type: 'AWS::EC2::SubnetRouteTableAssociation'
-      Properties:
-         RouteTableId: !Ref PublicRouteTable
-         SubnetId: !Ref PublicSubnet
-   BridgeInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For bridge instances.'
-         SecurityGroupIngress:
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   BridgeSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For instances to be accessed by bridge instances.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-#   BridgeInstanceSecurityGroupEgress:
-#      Type: 'AWS::EC2::SecurityGroupEgress'
+#   InternetGateway:
+#      Type: 'AWS::EC2::InternetGateway'
+#   InternetGatewayAttachment:
+#      Type: 'AWS::EC2::VPCGatewayAttachment'
 #      Properties:
-#         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
-#         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
-#         FromPort: 22
-#         ToPort: 22
-#         IpProtocol: tcp
-   NatSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For instances on private subnets to access the NAT instance.'
-         VpcId: !Ref Vpc
-   NatInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For the NAT instance itself.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt NatSecurityGroup.GroupId
-               FromPort: '-1'
-               ToPort: '-1'
-               IpProtocol: '-1'
-         VpcId: !Ref Vpc
-   NatInstance:
-      Type: 'AWS::EC2::Instance'
-      Properties:
-         InstanceType: !Ref NatInstanceType
-         ImageId: !Ref NatInstanceImageId
-         KeyName: music-nat
-         NetworkInterfaces:
-            -
-               DeviceIndex: 0
-               GroupSet:
-                  - !GetAtt BridgeSecurityGroup.GroupId
-                  - !GetAtt NatInstanceSecurityGroup.GroupId
-               SubnetId: !Ref PublicSubnet
-               AssociatePublicIpAddress: true
-         SourceDestCheck: false
-      DependsOn: InternetGatewayAttachment
-   BridgeInstanceLaunchTemplate:
-      Type: 'AWS::EC2::Instance'
-      Properties:
-         NetworkInterfaces:
-            -
-               DeviceIndex: 0
-               GroupSet:
-                  - !GetAtt BridgeInstanceSecurityGroup.GroupId
-                  - !GetAtt NatSecurityGroup.GroupId
-               SubnetId: !Ref PublicSubnet
-               AssociatePublicIpAddress: true
-   PrivateSubnet:
+#         InternetGatewayId: !Ref InternetGateway
+#         VpcId: !Ref Vpc
+   PublicSubnet:
+      DependsOn: VpcIpv6AddressBlock
       Type: 'AWS::EC2::Subnet'
       Properties:
-         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
+         CidrBlock: !Select [ 1 , !Cidr [ !GetAtt Vpc.CidrBlock , 2 , 4 ] ]
+#         Ipv6CidrBlock: !Select [ 1 , !Cidr [ !Select [ 0 , !GetAtt Vpc.Ipv6CidrBlocks ] , 2 ] ]
+         Ipv6CidrBlock:
+            Fn::Select:
+               - 1
+               - Fn::Cidr:
+                  - Fn::Select:
+                     - 0
+                     - Fn::GetAtt:
+                        - Vpc
+                        - Ipv6CidrBlocks
+                  - 2
          VpcId: !Ref Vpc
-   PrivateRouteTable:
-      Type: 'AWS::EC2::RouteTable'
-      Properties:
-         VpcId: !Ref Vpc
-   NatRoute:
-      Type: 'AWS::EC2::Route'
-      Properties:
-         RouteTableId: !Ref PrivateRouteTable
-         InstanceId: !Ref NatInstance
-         DestinationCidrBlock: 0.0.0.0/0
-   PrivateRouteTableAssociation:
-      Type: 'AWS::EC2::SubnetRouteTableAssociation'
-      Properties:
-         RouteTableId: !Ref PrivateRouteTable
-         SubnetId: !Ref PrivateSubnet
-   VolmgrAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
-         VpcId: !Ref Vpc
-   VolmgrAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   VolmgrAmiBuildRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'codebuild.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: packer
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeImages'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'music-volmgr'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:CreateAction: 'RunInstances'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:StopInstances'
-                           - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:ResourceTag/Packer: 'music-volmgr'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateImage'
-                           - 'ec2:RegisterImage'
-                           - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeVolumes'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: launch-template
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
-                        Effect: Allow
-   VolmgrAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: logs
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'logs:CreateLogGroup'
-                     - 'logs:CreateLogStream'
-                     - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolmgrAmiBuildProject}:*'
-                  Effect: Allow
-         Roles:
-            - !Ref VolmgrAmiBuildRole
-   VolmgrInstanceRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'ec2.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: sources
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 's3:ListBucket'
-                        Resource: !ImportValue music-SourcesBucketArn
-                        Effect: Allow
-                     -
-                        Action:
-                           - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
-                        Effect: Allow
-   VolmgrInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
-      Properties:
-         Roles:
-            - !Ref VolmgrInstanceRole
-   VolmgrAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
-      Properties:
-         Name: music-volmgr-ami
-         Description: 'Build AMI to manage music volumes.'
-         ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
-         Source:
-            Type: !FindInMap [ CodeOriginMap , 
-            Location: !If [ CodeOriginCodeCommit , CODECOMMIT ,  ]
-            GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
-         Environment:
-            Type: LINUX_CONTAINER
-            ComputeType: BUILD_GENERAL1_SMALL
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
-            PrivilegedMode: false
-            EnvironmentVariables:
-               -
-                  Name: NAME
-                  Type: PLAINTEXT
-                  Value: volmgr
-               -
-                  Name: INSTANCE_VPC
-                  Type: PLAINTEXT
-                  Value: !Ref Vpc
-               -
-                  Name: INSTANCE_SUBNET
-                  Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
-               -
-                  Name: INSTANCE_SECURITY_GROUPS
-                  Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: SOURCES_BUCKET
-                  Type: PLAINTEXT
-                  Value: !ImportValue music-SourcesBucket
-               -
-                  Name: LAUNCH_TEMPLATE
-                  Type: PLAINTEXT
-                  Value: !Ref VolmgrLaunchTemplate
-         VpcConfig:
-            VpcId: !Ref Vpc
-            Subnets:
-               - !Ref PrivateSubnet
-            SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
-               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
-         Artifacts:
-            Type: NO_ARTIFACTS
-      DependsOn: CodeBuildVpcPolicy
-   WorkerAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For CodeBuild to access worker AMI build instances.'
-         VpcId: !Ref Vpc
-   WorkerAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For worker AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   WorkerAmiBuildRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'codebuild.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: packer
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeImages'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'music-worker'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:CreateAction: 'RunInstances'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'iam:PassRole'
-                        Resource:
-                           - !GetAtt WorkerInstanceRole.Arn
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:StopInstances'
-                           - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:ResourceTag/Packer: 'music-worker'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateImage'
-                           - 'ec2:RegisterImage'
-                           - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeVolumes'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: launch-template
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
-                        Effect: Allow
-   WorkerAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: logs
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'logs:CreateLogGroup'
-                     - 'logs:CreateLogStream'
-                     - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${WorkerAmiBuildProject}:*'
-                  Effect: Allow
-         Roles:
-            - !Ref WorkerAmiBuildRole
-   WorkerInstanceRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'ec2.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: parameters
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ssm:GetParametersByPath'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/profiles/*'
-                        Effect: Allow
-   WorkerInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
-      Properties:
-         Roles:
-            - !Ref WorkerInstanceRole
-   WorkerAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
-      Properties:
-         Name: music-worker-ami
-         Description: 'Build AMI to compile music library.'
-         ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
-         Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
-            GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
-         Environment:
-            Type: LINUX_CONTAINER
-            ComputeType: BUILD_GENERAL1_SMALL
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
-            PrivilegedMode: false
-            EnvironmentVariables:
-               -
-                  Name: NAME
-                  Type: PLAINTEXT
-                  Value: worker
-               -
-                  Name: INSTANCE_VPC
-                  Type: PLAINTEXT
-                  Value: !Ref Vpc
-               -
-                  Name: INSTANCE_SUBNET
-                  Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
-               -
-                  Name: INSTANCE_SECURITY_GROUPS
-                  Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: INSTANCE_PROFILE
-                  Type: PLAINTEXT
-                  Value: !Ref WorkerInstanceProfile
-               -
-                  Name: CODE_REPOSITORY
-                  Type: PLAINTEXT
-                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
-               -
-                  Name: LAUNCH_TEMPLATE
-                  Type: PLAINTEXT
-                  Value: !Ref WorkerLaunchTemplate
-         VpcConfig:
-            VpcId: !Ref Vpc
-            Subnets:
-               - !Ref PrivateSubnet
-            SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
-               - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
-         Artifacts:
-            Type: NO_ARTIFACTS
-      DependsOn: CodeBuildVpcPolicy
-   ServerAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For CodeBuild to access server AMI build instances.'
-         VpcId: !Ref Vpc
-   ServerAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For server AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   ServerAmiBuildRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'codebuild.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: packer
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeImages'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'music-server'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:CreateAction: 'RunInstances'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:StopInstances'
-                           - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              ec2:ResourceTag/Packer: 'music-server'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateImage'
-                           - 'ec2:RegisterImage'
-                           - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:DescribeVolumes'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: launch-template
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
-                        Effect: Allow
-   ServerAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: logs
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'logs:CreateLogGroup'
-                     - 'logs:CreateLogStream'
-                     - 'logs:PutLogEvents'
-                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ServerAmiBuildProject}:*'
-                  Effect: Allow
-         Roles:
-            - !Ref ServerAmiBuildRole
-   ServerAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
-      Properties:
-         Name: music-server-ami
-         Description: 'Build AMI to serve music library.'
-         ServiceRole: !GetAtt ServerAmiBuildRole.Arn
-         Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
-            GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
-         Environment:
-            Type: LINUX_CONTAINER
-            ComputeType: BUILD_GENERAL1_SMALL
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
-            PrivilegedMode: false
-            EnvironmentVariables:
-               -
-                  Name: NAME
-                  Type: PLAINTEXT
-                  Value: server
-               -
-                  Name: INSTANCE_VPC
-                  Type: PLAINTEXT
-                  Value: !Ref Vpc
-               -
-                  Name: INSTANCE_SUBNET
-                  Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
-               -
-                  Name: INSTANCE_SECURITY_GROUPS
-                  Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: CODE_REPOSITORY
-                  Type: PLAINTEXT
-                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
-               -
-                  Name: LAUNCH_TEMPLATE
-                  Type: PLAINTEXT
-                  Value: !Ref ServerLaunchTemplate
-         VpcConfig:
-            VpcId: !Ref Vpc
-            Subnets:
-               - !Ref PrivateSubnet
-            SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
-               - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
-         Artifacts:
-            Type: NO_ARTIFACTS
-      DependsOn: CodeBuildVpcPolicy
-   EcrPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: codebuild-environment
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'ecr:GetDownloadUrlForLayer'
-                     - 'ecr:BatchGetImage'
-                     - 'ecr:BatchCheckLayerAvailability'
-                  Resource: '*'
-                  Effect: Allow
-         Roles:
-            - !Ref WorkerAmiBuildRole
-            - !Ref ServerAmiBuildRole
-   CodeCommitPolicy:
-      Condition: CodeOriginCodeCommit
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: codecommit-pull
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'codecommit:GitPull'
-                  Resource: !ImportValue music-CodeRepositoryArn
-                  Effect: Allow
-         Roles:
-            - !Ref VolmgrAmiBuildRole
-            - !Ref WorkerAmiBuildRole
-            - !Ref WorkerInstanceRole
-            - !Ref ServerAmiBuildRole
-   CodeBuildVpcPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: codebuild-vpc
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'ec2:CreateNetworkInterface'
-                     - 'ec2:DeleteNetworkInterface'
-                     - 'ec2:DescribeDhcpOptions'
-                     - 'ec2:DescribeNetworkInterfaces'
-                     - 'ec2:DescribeSecurityGroups'
-                     - 'ec2:DescribeSubnets'
-                     - 'ec2:DescribeVpcs'
-                  Resource: '*'
-                  Effect: Allow
-               -
-                  Action:
-                     - 'ec2:CreateNetworkInterfacePermission'
-                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                  Condition:
-                     StringEquals:
-                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
-                        ec2:AuthorizedService: 'codebuild.amazonaws.com'
-                  Effect: Allow
-         Roles:
-            - !Ref VolmgrAmiBuildRole
-            - !Ref WorkerAmiBuildRole
-            - !Ref ServerAmiBuildRole
-   VolmgrLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
-      Properties:
-         LaunchTemplateName: music-volmgr
-         LaunchTemplateData:
-            IamInstanceProfile:
-               Arn: !GetAtt VolmgrInstanceProfile.Arn
-            KeyName: music-volmgr
-            NetworkInterfaces:
-               -
-                  DeviceIndex: 0
-                  Groups:
-                     - !GetAtt NatSecurityGroup.GroupId
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                  SubnetId: !Ref PrivateSubnet
-                  AssociatePublicIpAddress: false
-            InstanceInitiatedShutdownBehavior: terminate
-   WorkerLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
-      Properties:
-         LaunchTemplateName: music-worker
-         LaunchTemplateData:
-            IamInstanceProfile:
-               Arn: !GetAtt WorkerInstanceProfile.Arn
-            KeyName: music-worker
-            NetworkInterfaces:
-               -
-                  DeviceIndex: 0
-                  Groups:
-                     - !GetAtt NatSecurityGroup.GroupId
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                  SubnetId: !Ref PrivateSubnet
-                  AssociatePublicIpAddress: false
-   ServerInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For the server instance to be accessible.'
-         SecurityGroupIngress:
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: 873
-               ToPort: 873
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   ServerLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
-      Properties:
-         LaunchTemplateName: music-server
-         LaunchTemplateData:
-            KeyName: music-server
-            NetworkInterfaces:
-               -
-                  DeviceIndex: 0
-                  Groups:
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                     - !GetAtt ServerInstanceSecurityGroup.GroupId
-                  SubnetId: !Ref PublicSubnet
-                  AssociatePublicIpAddress: true
+#   PublicRouteTable:
+#      Type: 'AWS::EC2::RouteTable'
+#      Properties:
+#         VpcId: !Ref Vpc
+#   InternetRoute:
+#      DependsOn: InternetGatewayAttachment
+#      Type: 'AWS::EC2::Route'
+#      Properties:
+#         RouteTableId: !Ref PublicRouteTable
+#         GatewayId: !Ref InternetGateway
+#         DestinationCidrBlock: '0.0.0.0/0'
+#   PublicRouteTableAssociation:
+#      Type: 'AWS::EC2::SubnetRouteTableAssociation'
+#      Properties:
+#         RouteTableId: !Ref PublicRouteTable
+#         SubnetId: !Ref PublicSubnet
+#   BridgeInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For bridge instances.'
+#         SecurityGroupIngress:
+#            -
+#               CidrIp: 0.0.0.0/0
+#               FromPort: 22
+#               ToPort: 22
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+#   BridgeSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For instances to be accessed by bridge instances.'
+#         SecurityGroupIngress:
+#            -
+#               SourceSecurityGroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
+#               FromPort: 22
+#               ToPort: 22
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+##   BridgeInstanceSecurityGroupEgress:
+##      Type: 'AWS::EC2::SecurityGroupEgress'
+##      Properties:
+##         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
+##         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
+##         FromPort: 22
+##         ToPort: 22
+##         IpProtocol: tcp
+#   NatSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For instances on private subnets to access the NAT instance.'
+#         VpcId: !Ref Vpc
+#   NatInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For the NAT instance itself.'
+#         SecurityGroupIngress:
+#            -
+#               SourceSecurityGroupId: !GetAtt NatSecurityGroup.GroupId
+#               FromPort: '-1'
+#               ToPort: '-1'
+#               IpProtocol: '-1'
+#         VpcId: !Ref Vpc
+#   NatInstance:
+#      Type: 'AWS::EC2::Instance'
+#      Properties:
+#         InstanceType: !Ref NatInstanceType
+#         ImageId: !Ref NatInstanceImageId
+#         KeyName: !Ref NatInstanceKeyName
+#         NetworkInterfaces:
+#            -
+#               DeviceIndex: 0
+#               GroupSet:
+#                  - !GetAtt BridgeSecurityGroup.GroupId
+#                  - !GetAtt NatInstanceSecurityGroup.GroupId
+#               SubnetId: !Ref PublicSubnet
+#               AssociatePublicIpAddress: true
+#         SourceDestCheck: false
+#      DependsOn: InternetGatewayAttachment
+#   BridgeInstanceLaunchTemplate:
+#      Type: 'AWS::EC2::Instance'
+#      Properties:
+#         NetworkInterfaces:
+#            -
+#               DeviceIndex: 0
+#               GroupSet:
+#                  - !GetAtt BridgeInstanceSecurityGroup.GroupId
+#                  - !GetAtt NatSecurityGroup.GroupId
+#               SubnetId: !Ref PublicSubnet
+#               AssociatePublicIpAddress: true
+#   PrivateSubnet:
+#      Type: 'AWS::EC2::Subnet'
+#      Properties:
+#         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
+#         VpcId: !Ref Vpc
+#   PrivateRouteTable:
+#      Type: 'AWS::EC2::RouteTable'
+#      Properties:
+#         VpcId: !Ref Vpc
+#   NatRoute:
+#      Type: 'AWS::EC2::Route'
+#      Properties:
+#         RouteTableId: !Ref PrivateRouteTable
+#         InstanceId: !Ref NatInstance
+#         DestinationCidrBlock: 0.0.0.0/0
+#   PrivateRouteTableAssociation:
+#      Type: 'AWS::EC2::SubnetRouteTableAssociation'
+#      Properties:
+#         RouteTableId: !Ref PrivateRouteTable
+#         SubnetId: !Ref PrivateSubnet
+#   VolmgrAmiBuildContainerSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
+#         VpcId: !Ref Vpc
+#   VolmgrAmiBuildInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
+#         SecurityGroupIngress:
+#            -
+#               SourceSecurityGroupId: !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+#               FromPort: 22
+#               ToPort: 22
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+#   VolmgrAmiBuildRole:
+#      Type: 'AWS::IAM::Role'
+#      Properties:
+#         AssumeRolePolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Principal:
+#                     Service: 'codebuild.amazonaws.com'
+#                  Action: 'sts:AssumeRole'
+#                  Effect: Allow
+#         Policies:
+#            -
+#               PolicyName: packer
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeImages'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              aws:RequestTag/Packer: 'music-volmgr'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateTags'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:CreateAction: 'RunInstances'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeInstances'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:StopInstances'
+#                           - 'ec2:TerminateInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:ResourceTag/Packer: 'music-volmgr'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateImage'
+#                           - 'ec2:RegisterImage'
+#                           - 'ec2:ModifyImageAttribute'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeVolumes'
+#                        Resource: '*'
+#                        Effect: Allow
+#            -
+#               PolicyName: launch-template
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeLaunchTemplates'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateLaunchTemplateVersion'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:ModifyLaunchTemplate'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
+#                        Effect: Allow
+#   VolmgrAmiBuildLogsPolicy:
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: logs
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'logs:CreateLogGroup'
+#                     - 'logs:CreateLogStream'
+#                     - 'logs:PutLogEvents'
+#                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolmgrAmiBuildProject}:*'
+#                  Effect: Allow
+#         Roles:
+#            - !Ref VolmgrAmiBuildRole
+#   VolmgrInstanceRole:
+#      Type: 'AWS::IAM::Role'
+#      Properties:
+#         AssumeRolePolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Principal:
+#                     Service: 'ec2.amazonaws.com'
+#                  Action: 'sts:AssumeRole'
+#                  Effect: Allow
+#         Policies:
+#            -
+#               PolicyName: sources
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 's3:ListBucket'
+#                        Resource: !ImportValue music-SourcesBucketArn
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 's3:GetObject'
+#                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
+#                        Effect: Allow
+#   VolmgrInstanceProfile:
+#      Type: 'AWS::IAM::InstanceProfile'
+#      Properties:
+#         Roles:
+#            - !Ref VolmgrInstanceRole
+#   VolmgrAmiBuildProject:
+#      Type: 'AWS::CodeBuild::Project'
+#      Properties:
+#         Name: music-volmgr-ami
+#         Description: 'Build AMI to manage music volumes.'
+#         ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
+#         Source:
+#            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+#            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+#            GitCloneDepth: 1
+#            BuildSpec: 'ec2/buildspec.yaml'
+#         Environment:
+#            Type: LINUX_CONTAINER
+#            ComputeType: BUILD_GENERAL1_SMALL
+#            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+#            PrivilegedMode: false
+#            EnvironmentVariables:
+#               -
+#                  Name: NAME
+#                  Type: PLAINTEXT
+#                  Value: volmgr
+#               -
+#                  Name: INSTANCE_VPC
+#                  Type: PLAINTEXT
+#                  Value: !Ref Vpc
+#               -
+#                  Name: INSTANCE_SUBNET
+#                  Type: PLAINTEXT
+#                  Value: !Ref PrivateSubnet
+#               -
+#                  Name: INSTANCE_SECURITY_GROUPS
+#                  Type: PLAINTEXT
+#                  Value: !Sub '${NatSecurityGroup.GroupId},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+#               -
+#                  Name: SOURCES_BUCKET
+#                  Type: PLAINTEXT
+#                  Value: !ImportValue music-SourcesBucket
+#               -
+#                  Name: LAUNCH_TEMPLATE
+#                  Type: PLAINTEXT
+#                  Value: !Ref VolmgrLaunchTemplate
+#         VpcConfig:
+#            VpcId: !Ref Vpc
+#            Subnets:
+#               - !Ref PrivateSubnet
+#            SecurityGroupIds:
+#               - !GetAtt NatSecurityGroup.GroupId
+#               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+#         Artifacts:
+#            Type: NO_ARTIFACTS
+#      DependsOn: CodeBuildVpcPolicy
+#   WorkerAmiBuildContainerSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For CodeBuild to access worker AMI build instances.'
+#         VpcId: !Ref Vpc
+#   WorkerAmiBuildInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For worker AMI build instances to be accessed by CodeBuild.'
+#         SecurityGroupIngress:
+#            -
+#               SourceSecurityGroupId: !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
+#               FromPort: 22
+#               ToPort: 22
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+#   WorkerAmiBuildRole:
+#      Type: 'AWS::IAM::Role'
+#      Properties:
+#         AssumeRolePolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Principal:
+#                     Service: 'codebuild.amazonaws.com'
+#                  Action: 'sts:AssumeRole'
+#                  Effect: Allow
+#         Policies:
+#            -
+#               PolicyName: packer
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeImages'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              aws:RequestTag/Packer: 'music-worker'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateTags'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:CreateAction: 'RunInstances'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'iam:PassRole'
+#                        Resource:
+#                           - !GetAtt WorkerInstanceRole.Arn
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeInstances'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:StopInstances'
+#                           - 'ec2:TerminateInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:ResourceTag/Packer: 'music-worker'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateImage'
+#                           - 'ec2:RegisterImage'
+#                           - 'ec2:ModifyImageAttribute'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeVolumes'
+#                        Resource: '*'
+#                        Effect: Allow
+#            -
+#               PolicyName: launch-template
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeLaunchTemplates'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateLaunchTemplateVersion'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:ModifyLaunchTemplate'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+#                        Effect: Allow
+#   WorkerAmiBuildLogsPolicy:
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: logs
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'logs:CreateLogGroup'
+#                     - 'logs:CreateLogStream'
+#                     - 'logs:PutLogEvents'
+#                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${WorkerAmiBuildProject}:*'
+#                  Effect: Allow
+#         Roles:
+#            - !Ref WorkerAmiBuildRole
+#   WorkerInstanceRole:
+#      Type: 'AWS::IAM::Role'
+#      Properties:
+#         AssumeRolePolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Principal:
+#                     Service: 'ec2.amazonaws.com'
+#                  Action: 'sts:AssumeRole'
+#                  Effect: Allow
+#         Policies:
+#            -
+#               PolicyName: parameters
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ssm:GetParametersByPath'
+#                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/profiles/*'
+#                        Effect: Allow
+#   WorkerInstanceProfile:
+#      Type: 'AWS::IAM::InstanceProfile'
+#      Properties:
+#         Roles:
+#            - !Ref WorkerInstanceRole
+#   WorkerAmiBuildProject:
+#      Type: 'AWS::CodeBuild::Project'
+#      Properties:
+#         Name: music-worker-ami
+#         Description: 'Build AMI to compile music library.'
+#         ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
+#         Source:
+#            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+#            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+#            GitCloneDepth: 1
+#            BuildSpec: 'ec2/buildspec.yaml'
+#         Environment:
+#            Type: LINUX_CONTAINER
+#            ComputeType: BUILD_GENERAL1_SMALL
+#            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+#            PrivilegedMode: false
+#            EnvironmentVariables:
+#               -
+#                  Name: NAME
+#                  Type: PLAINTEXT
+#                  Value: worker
+#               -
+#                  Name: INSTANCE_VPC
+#                  Type: PLAINTEXT
+#                  Value: !Ref Vpc
+#               -
+#                  Name: INSTANCE_SUBNET
+#                  Type: PLAINTEXT
+#                  Value: !Ref PrivateSubnet
+#               -
+#                  Name: INSTANCE_SECURITY_GROUPS
+#                  Type: PLAINTEXT
+#                  Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
+#               -
+#                  Name: INSTANCE_PROFILE
+#                  Type: PLAINTEXT
+#                  Value: !Ref WorkerInstanceProfile
+#               -
+#                  Name: CODE_REPOSITORY
+#                  Type: PLAINTEXT
+#                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
+#               -
+#                  Name: LAUNCH_TEMPLATE
+#                  Type: PLAINTEXT
+#                  Value: !Ref WorkerLaunchTemplate
+#         VpcConfig:
+#            VpcId: !Ref Vpc
+#            Subnets:
+#               - !Ref PrivateSubnet
+#            SecurityGroupIds:
+#               - !GetAtt NatSecurityGroup.GroupId
+#               - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
+#         Artifacts:
+#            Type: NO_ARTIFACTS
+#      DependsOn: CodeBuildVpcPolicy
+#   ServerAmiBuildContainerSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For CodeBuild to access server AMI build instances.'
+#         VpcId: !Ref Vpc
+#   ServerAmiBuildInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For server AMI build instances to be accessed by CodeBuild.'
+#         SecurityGroupIngress:
+#            -
+#               SourceSecurityGroupId: !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
+#               FromPort: 22
+#               ToPort: 22
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+#   ServerAmiBuildRole:
+#      Type: 'AWS::IAM::Role'
+#      Properties:
+#         AssumeRolePolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Principal:
+#                     Service: 'codebuild.amazonaws.com'
+#                  Action: 'sts:AssumeRole'
+#                  Effect: Allow
+#         Policies:
+#            -
+#               PolicyName: packer
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeImages'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              aws:RequestTag/Packer: 'music-server'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:RunInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/music-packer'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateTags'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:CreateAction: 'RunInstances'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeInstances'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:StopInstances'
+#                           - 'ec2:TerminateInstances'
+#                        Resource:
+#                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+#                        Condition:
+#                           StringEquals:
+#                              ec2:ResourceTag/Packer: 'music-server'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateImage'
+#                           - 'ec2:RegisterImage'
+#                           - 'ec2:ModifyImageAttribute'
+#                        Resource:
+#                           - '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeVolumes'
+#                        Resource: '*'
+#                        Effect: Allow
+#            -
+#               PolicyName: launch-template
+#               PolicyDocument:
+#                  Version: '2012-10-17'
+#                  Statement:
+#                     -
+#                        Action:
+#                           - 'ec2:DescribeLaunchTemplates'
+#                        Resource: '*'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:CreateLaunchTemplateVersion'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
+#                        Effect: Allow
+#                     -
+#                        Action:
+#                           - 'ec2:ModifyLaunchTemplate'
+#                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
+#                        Effect: Allow
+#   ServerAmiBuildLogsPolicy:
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: logs
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'logs:CreateLogGroup'
+#                     - 'logs:CreateLogStream'
+#                     - 'logs:PutLogEvents'
+#                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ServerAmiBuildProject}:*'
+#                  Effect: Allow
+#         Roles:
+#            - !Ref ServerAmiBuildRole
+#   ServerAmiBuildProject:
+#      Type: 'AWS::CodeBuild::Project'
+#      Properties:
+#         Name: music-server-ami
+#         Description: 'Build AMI to serve music library.'
+#         ServiceRole: !GetAtt ServerAmiBuildRole.Arn
+#         Source:
+#            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+#            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+#            GitCloneDepth: 1
+#            BuildSpec: 'ec2/buildspec.yaml'
+#         Environment:
+#            Type: LINUX_CONTAINER
+#            ComputeType: BUILD_GENERAL1_SMALL
+#            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+#            PrivilegedMode: false
+#            EnvironmentVariables:
+#               -
+#                  Name: NAME
+#                  Type: PLAINTEXT
+#                  Value: server
+#               -
+#                  Name: INSTANCE_VPC
+#                  Type: PLAINTEXT
+#                  Value: !Ref Vpc
+#               -
+#                  Name: INSTANCE_SUBNET
+#                  Type: PLAINTEXT
+#                  Value: !Ref PrivateSubnet
+#               -
+#                  Name: INSTANCE_SECURITY_GROUPS
+#                  Type: PLAINTEXT
+#                  Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
+#               -
+#                  Name: CODE_REPOSITORY
+#                  Type: PLAINTEXT
+#                  Value: !ImportValue music-CodeRepositoryCloneUrlHttp
+#               -
+#                  Name: LAUNCH_TEMPLATE
+#                  Type: PLAINTEXT
+#                  Value: !Ref ServerLaunchTemplate
+#         VpcConfig:
+#            VpcId: !Ref Vpc
+#            Subnets:
+#               - !Ref PrivateSubnet
+#            SecurityGroupIds:
+#               - !GetAtt NatSecurityGroup.GroupId
+#               - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
+#         Artifacts:
+#            Type: NO_ARTIFACTS
+#      DependsOn: CodeBuildVpcPolicy
+#   EcrPolicy:
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: codebuild-environment
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'ecr:GetDownloadUrlForLayer'
+#                     - 'ecr:BatchGetImage'
+#                     - 'ecr:BatchCheckLayerAvailability'
+#                  Resource: '*'
+#                  Effect: Allow
+#         Roles:
+#            - !Ref WorkerAmiBuildRole
+#            - !Ref ServerAmiBuildRole
+#   CodeCommitPolicy:
+#      Condition: CodeRepositoryLocationCodeCommit
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: codecommit-pull
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'codecommit:GitPull'
+#                  Resource: !ImportValue music-CodeRepositoryArn
+#                  Effect: Allow
+#         Roles:
+#            - !Ref VolmgrAmiBuildRole
+#            - !Ref WorkerAmiBuildRole
+#            - !Ref WorkerInstanceRole
+#            - !Ref ServerAmiBuildRole
+#   CodeBuildVpcPolicy:
+#      Type: 'AWS::IAM::Policy'
+#      Properties:
+#         PolicyName: codebuild-vpc
+#         PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#               -
+#                  Action:
+#                     - 'ec2:CreateNetworkInterface'
+#                     - 'ec2:DeleteNetworkInterface'
+#                     - 'ec2:DescribeDhcpOptions'
+#                     - 'ec2:DescribeNetworkInterfaces'
+#                     - 'ec2:DescribeSecurityGroups'
+#                     - 'ec2:DescribeSubnets'
+#                     - 'ec2:DescribeVpcs'
+#                  Resource: '*'
+#                  Effect: Allow
+#               -
+#                  Action:
+#                     - 'ec2:CreateNetworkInterfacePermission'
+#                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+#                  Condition:
+#                     StringEquals:
+#                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+#                        ec2:AuthorizedService: 'codebuild.amazonaws.com'
+#                  Effect: Allow
+#         Roles:
+#            - !Ref VolmgrAmiBuildRole
+#            - !Ref WorkerAmiBuildRole
+#            - !Ref ServerAmiBuildRole
+#   VolmgrLaunchTemplate:
+#      Type: 'AWS::EC2::LaunchTemplate'
+#      Properties:
+#         LaunchTemplateName: music-volmgr
+#         LaunchTemplateData:
+#            IamInstanceProfile:
+#               Arn: !GetAtt VolmgrInstanceProfile.Arn
+#            KeyName: music-volmgr
+#            NetworkInterfaces:
+#               -
+#                  DeviceIndex: 0
+#                  Groups:
+#                     - !GetAtt NatSecurityGroup.GroupId
+#                     - !GetAtt BridgeSecurityGroup.GroupId
+#                  SubnetId: !Ref PrivateSubnet
+#                  AssociatePublicIpAddress: false
+#            InstanceInitiatedShutdownBehavior: terminate
+#   WorkerLaunchTemplate:
+#      Type: 'AWS::EC2::LaunchTemplate'
+#      Properties:
+#         LaunchTemplateName: music-worker
+#         LaunchTemplateData:
+#            IamInstanceProfile:
+#               Arn: !GetAtt WorkerInstanceProfile.Arn
+#            KeyName: music-worker
+#            NetworkInterfaces:
+#               -
+#                  DeviceIndex: 0
+#                  Groups:
+#                     - !GetAtt NatSecurityGroup.GroupId
+#                     - !GetAtt BridgeSecurityGroup.GroupId
+#                  SubnetId: !Ref PrivateSubnet
+#                  AssociatePublicIpAddress: false
+#   ServerInstanceSecurityGroup:
+#      Type: 'AWS::EC2::SecurityGroup'
+#      Properties:
+#         GroupDescription: 'For the server instance to be accessible.'
+#         SecurityGroupIngress:
+#            -
+#               CidrIp: 0.0.0.0/0
+#               FromPort: 873
+#               ToPort: 873
+#               IpProtocol: tcp
+#         VpcId: !Ref Vpc
+#   ServerLaunchTemplate:
+#      Type: 'AWS::EC2::LaunchTemplate'
+#      Properties:
+#         LaunchTemplateName: music-server
+#         LaunchTemplateData:
+#            KeyName: music-server
+#            NetworkInterfaces:
+#               -
+#                  DeviceIndex: 0
+#                  Groups:
+#                     - !GetAtt BridgeSecurityGroup.GroupId
+#                     - !GetAtt ServerInstanceSecurityGroup.GroupId
+#                  SubnetId: !Ref PublicSubnet
+#                  AssociatePublicIpAddress: true
