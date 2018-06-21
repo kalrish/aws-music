@@ -7,7 +7,7 @@ phases:
          - aws s3 sync --quiet "s3://${SOURCE_BUCKET}" codebuild/run/build
          - mv -ft codebuild/run/build -- tup/*
          - cd codebuild/run/build
-         - mkdir build
+         - mkdir -p build
          - aws --query 'Parameter.Value' --output text ssm get-parameter --name "/vibes/profiles/${PROFILE}" >build/tup.config
          - tup build
          - rm -- build/tup.config
