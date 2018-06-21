@@ -5,8 +5,8 @@ phases:
    build:
       commands:
          - if test ! -f 'codebuild/env/get-pip.py' ; then curl -sS -o 'codebuild/env/get-pip.py' 'https://bootstrap.pypa.io/get-pip.py' ; fi
-         - docker build -t music-env:latest codebuild/env
-         - docker tag music-env "${REPOSITORY}"
+         - docker build -t vibes-codebuild-env:latest codebuild/env
+         - docker tag vibes-codebuild-env "${REPOSITORY}"
          - $(aws ecr get-login --no-include-email)
          - docker push "${REPOSITORY}"
 

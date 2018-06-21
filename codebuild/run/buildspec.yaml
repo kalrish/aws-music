@@ -4,11 +4,11 @@ version: 0.2
 phases:
    build:
       commands:
-         - aws s3 cp --quiet --recursive "s3://${SOURCE_BUCKET}" codebuild/run/build
+         - aws s3 sync --quiet "s3://${SOURCE_BUCKET}" codebuild/run/build
          - mv -ft codebuild/run/build -- tup/*
          - cd codebuild/run/build
          - mkdir build
-         - aws --query 'Parameter.Value' --output text ssm get-parameter --name "/music/profiles/${PROFILE}/config" >build/tup.config
+         - aws --query 'Parameter.Value' --output text ssm get-parameter --name "/vibes/profiles/${PROFILE}" >build/tup.config
          - tup build
          - rm -- build/tup.config
 

@@ -1,5 +1,20 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+   CodeRepositoryLocation:
+      Description: 'Location of the build code.'
+      Type: String
+      AllowedValues:
+         - GitHub
+         - CodeCommit
+      Default: GitHub
+Mappings:
+   CodeRepositoryMap:
+      Location:
+         GitHub: GITHUB
+         CodeCommit: CODECOMMIT
+Conditions:
+   CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
    BuildRole:
       Type: 'AWS::IAM::Role'
@@ -13,16 +28,6 @@ Resources:
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
-            -
-               PolicyName: codecommit-pull
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-CodeRepositoryArn
-                        Effect: Allow
             -
                PolicyName: ecr-push
                PolicyDocument:
@@ -65,15 +70,29 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref BuildRole
+   CodeCommitPolicy:
+      Condition: CodeRepositoryLocationCodeCommit
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codecommit-pull
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'codecommit:GitPull'
+                  Resource: !ImportValue vibes-CodeRepositoryArn
+                  Effect: Allow
+         Roles:
+            - !Ref BuildRole
    ContainerRepository:
       Type: 'AWS::ECR::Repository'
       Properties:
-         RepositoryName: music-env
+         RepositoryName: vibes-codebuild-env
          RepositoryPolicyText:
             Version: '2012-10-17'
             Statement:
                -
-                  Sid: AllowPush
                   Principal:
                      AWS:
                         - !GetAtt BuildRole.Arn
@@ -86,7 +105,6 @@ Resources:
                      - 'ecr:UploadLayerPart'
                   Effect: Allow
                -
-                  Sid: AllowPull
                   Principal:
                      Service: 'codebuild.amazonaws.com'
                   Action:
@@ -104,22 +122,22 @@ Resources:
             Version: '2012-10-17'
             Statement:
                -
-                  Effect: Allow
+                  Principal:
+                     AWS: !GetAtt BuildRole.Arn
                   Action:
                      - 's3:GetObject'
                      - 's3:PutObject'
                   Resource: !Sub '${CacheBucket.Arn}/*'
-                  Principal:
-                     AWS: !GetAtt BuildRole.Arn
+                  Effect: Allow
    BuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: music-env
-         Description: 'Build CodeBuild environments to compile music collections.'
+         Name: vibes-codebuild-env
+         Description: 'Build CodeBuild environment used to compile music collections.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
+            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'codebuild/env/buildspec.yaml'
          Environment:
@@ -131,9 +149,15 @@ Resources:
                -
                   Name: REPOSITORY
                   Type: PLAINTEXT
-                  Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/music-env'
+                  Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ContainerRepository}'
          Cache:
             Type: S3
             Location: !Ref CacheBucket
          Artifacts:
             Type: NO_ARTIFACTS
+Outputs:
+   ContainerRepository:
+      Description: 'Name of the container repository.'
+      Value: !Ref ContainerRepository
+      Export:
+         Name: vibes-codebuild-ContainerRepository

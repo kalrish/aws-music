@@ -9,27 +9,40 @@ Parameters:
       Description: 'Whether to assign an IPv6 address block to the VPC and the subnets.'
       Type: String
       AllowedValues:
-         - 'yes'
-         - 'no'
+         - yes
+         - no
       Default: 'yes'
+   NatInstanceType:
+      Description: 'Type of the NAT instance.'
+      Type: String
    NatInstanceImageId:
       Description: 'AMI ID to base the NAT instance on.'
+      Type: 'AWS::EC2::Image::Id'
+   CodeOrigin:
+      Description: 'Location of the build code.'
       Type: String
-      AllowedPattern: '^ami-[a-z0-9]+$'
-   BridgeInstanceImageId:
-      Description: 'AMI ID to base the bridge instance on.'
-      Type: String
-      AllowedPattern: '^ami-[a-z0-9]+$'
+      AllowedValues:
+         - GitHub
+         - CodeCommit
 Conditions:
    EnableIpv6: !Equals [ !Ref EnableIpv6 , 'yes' ]
+   CodeOriginCodeCommit: !Equals [ !Ref CodeOrigin , 'CodeCommit' ]
+Mappings:
+   CodeOriginMap:
+      Type:
+         GitHub: GITHUB
+         CodeCommit: CODECOMMIT
+      Location:
+         GitHub: 'https://github.com/kalrish/aws-vibes.git'
+         CodeCommit: !ImportValue vibes-CodeRepositoryCloneUrlHttp
 Resources:
    Vpc:
       Type: 'AWS::EC2::VPC'
       Properties:
          CidrBlock: !Ref VpcIpv4AddressBlock
    VpcIpv6AddressBlock:
-      Type: 'AWS::EC2::VPCCidrBlock'
       Condition: EnableIpv6
+      Type: 'AWS::EC2::VPCCidrBlock'
       Properties:
          AmazonProvidedIpv6CidrBlock: true
          VpcId: !Ref Vpc
@@ -110,8 +123,8 @@ Resources:
    NatInstance:
       Type: 'AWS::EC2::Instance'
       Properties:
+         InstanceType: !Ref NatInstanceType
          ImageId: !Ref NatInstanceImageId
-         InstanceType: t2.micro
          KeyName: music-nat
          NetworkInterfaces:
             -
@@ -123,12 +136,9 @@ Resources:
                AssociatePublicIpAddress: true
          SourceDestCheck: false
       DependsOn: InternetGatewayAttachment
-   BridgeInstance:
+   BridgeInstanceLaunchTemplate:
       Type: 'AWS::EC2::Instance'
       Properties:
-         ImageId: !Ref BridgeInstanceImageId
-         InstanceType: t2.micro
-         KeyName: music-bridge
          NetworkInterfaces:
             -
                DeviceIndex: 0
@@ -328,8 +338,8 @@ Resources:
          Description: 'Build AMI to manage music volumes.'
          ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
          Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
+            Type: !FindInMap [ CodeOriginMap , 
+            Location: !If [ CodeOriginCodeCommit , CODECOMMIT ,  ]
             GitCloneDepth: 1
             BuildSpec: 'ec2/buildspec.yaml'
          Environment:
@@ -793,6 +803,7 @@ Resources:
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
    CodeCommitPolicy:
+      Condition: CodeOriginCodeCommit
       Type: 'AWS::IAM::Policy'
       Properties:
          PolicyName: codecommit-pull

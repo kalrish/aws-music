@@ -1,33 +1,16 @@
 #  AWS-based music compilation system
 
 
-Resources
+What is this?
 --------------------------------------------------------------------------------
 
-###  AMIs
-
-| AMI name       | Contents
-| -------------- | ----------
-| music-volmgr   |
-| music-worker   |
-| music-server   |
-
-####  Volume manager
-The volume manager AMI contains the tools required to manage the filesystems supported by Arch as well as the AWS CLI, which is used to download the music sources from the S3 bucket.
-
-####  Worker
-The worker AMI contains tup, the build system used to orchestrate the build process, the encoders supported by the build code and the tools required to mount the filesystems.
-
-####  Server
-The server AMI contains rsync as.
+The 
 
 
 Deployment
 --------------------------------------------------------------------------------
 
  1.  Clone this repository.
- 
-         $  git clone https://github.com/kalrish/aws-music.git
  
  2.  Deploy a new CloudFormation stack based on the `cfn/main.yaml` template.
  

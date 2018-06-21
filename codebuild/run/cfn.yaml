@@ -12,6 +12,20 @@ Parameters:
          - BUILD_GENERAL1_MEDIUM
          - BUILD_GENERAL1_LARGE
       Default: BUILD_GENERAL1_SMALL
+   CodeRepositoryLocation:
+      Description: 'Location of the build code.'
+      Type: String
+      AllowedValues:
+         - GitHub
+         - CodeCommit
+      Default: GitHub
+Mappings:
+   CodeRepositoryMap:
+      Location:
+         GitHub: GITHUB
+         CodeCommit: CODECOMMIT
+Conditions:
+   CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
    BuildRole:
       Type: 'AWS::IAM::Role'
@@ -25,16 +39,6 @@ Resources:
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
-            -
-               PolicyName: codecommit-pull
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'codecommit:GitPull'
-                        Resource: !ImportValue music-CodeRepositoryArn
-                        Effect: Allow
             -
                PolicyName: ecr-pull
                PolicyDocument:
@@ -55,12 +59,12 @@ Resources:
                      -
                         Action:
                            - 's3:ListBucket'
-                        Resource: !ImportValue music-SourcesBucketArn
+                        Resource: !ImportValue vibes-SourcesBucketArn
                         Effect: Allow
                      -
                         Action:
                            - 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue music-SourcesBucketArn, '*' ] ]
+                        Resource: !Join [ '/', [ !ImportValue vibes-SourcesBucketArn, '*' ] ]
                         Effect: Allow
             -
                PolicyName: parameters
@@ -70,7 +74,7 @@ Resources:
                      -
                         Action:
                            - 'ssm:GetParameter'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/music/profiles/${Profile}/*'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/${Profile}'
                         Effect: Allow
             -
                PolicyName: s3-cache
@@ -109,6 +113,21 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref BuildRole
+   CodeCommitPolicy:
+      Condition: CodeRepositoryLocationCodeCommit
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codecommit-pull
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'codecommit:GitPull'
+                  Resource: !ImportValue vibes-CodeRepositoryArn
+                  Effect: Allow
+         Roles:
+            - !Ref BuildRole
    CacheBucket:
       Type: 'AWS::S3::Bucket'
    CacheBucketPolicy:
@@ -119,19 +138,19 @@ Resources:
             Version: '2012-10-17'
             Statement:
                -
-                  Effect: Allow
+                  Principal:
+                     AWS: !GetAtt BuildRole.Arn
                   Action:
                      - 's3:GetObject'
                      - 's3:PutObject'
                   Resource: !Sub '${CacheBucket.Arn}/*'
-                  Principal:
-                     AWS: !GetAtt BuildRole.Arn
+                  Effect: Allow
    ArtifactsBucket:
       Type: 'AWS::S3::Bucket'
       Properties:
          Tags:
             -
-               Key: music
+               Key: vibes
                Value: artifacts
             -
                Key: profile
@@ -144,39 +163,43 @@ Resources:
             Version: '2012-10-17'
             Statement:
                -
-                  Effect: Allow
+                  Principal:
+                     AWS: !GetAtt BuildRole.Arn
                   Action:
                      - 's3:PutObject'
                   Resource: !Sub '${ArtifactsBucket.Arn}/*'
-                  Principal:
-                     AWS: !GetAtt BuildRole.Arn
+                  Effect: Allow
    ArtifactsParameter:
       Type: 'AWS::SSM::Parameter'
       Properties:
-         Name: !Sub '/music/profiles/${Profile}/artifacts'
+         Name: !Sub '/vibes/codebuild/artifacts/${Profile}'
          Type: String
          Value: !Ref ArtifactsBucket
    BuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: !Sub 'music-run-${Profile}'
+         Name: !Sub 'vibes-codebuild-run-${Profile}'
          Description: !Sub 'Compile music collection after the ${Profile} profile.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
-            Type: CODECOMMIT
-            Location: !ImportValue music-CodeRepositoryCloneUrlHttp
+            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'codebuild/run/buildspec.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: !Ref BuildComputeType
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/music-env'
+            Image: !Sub
+               - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ContainerRepository}'
+               - {
+                    ContainerRepository: !ImportValue vibes-codebuild-ContainerRepository
+                 }
             PrivilegedMode: true
             EnvironmentVariables:
                -
                   Name: SOURCE_BUCKET
                   Type: PLAINTEXT
-                  Value: !ImportValue music-SourcesBucket
+                  Value: !ImportValue vibes-SourcesBucket
                -
                   Name: PROFILE
                   Type: PLAINTEXT

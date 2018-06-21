@@ -199,3 +199,24 @@ Deployment
       2.  Attach the builds volume to the instance.
       
  8.  er
+
+
+Resources
+--------------------------------------------------------------------------------
+
+###  AMIs
+
+| AMI name       | Contents
+| -------------- | ----------
+| music-volmgr   |
+| music-worker   |
+| music-server   |
+
+####  Volume manager
+The volume manager AMI contains the tools required to manage the filesystems supported by Arch as well as the AWS CLI, which is used to download the music sources from the S3 bucket.
+
+####  Worker
+The worker AMI contains tup, the build system used to orchestrate the build process, the encoders supported by the build code and the tools required to mount the filesystems.
+
+####  Server
+The server AMI contains rsync as.

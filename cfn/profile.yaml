@@ -2,12 +2,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
    Profile:
+      Description: 'Name of the profile.'
       Type: String
-      Description: Name of the profile.
+   Config:
+      Description: 'Tup configuration associated to the profile.'
+      Type: CommaDelimitedList
 Resources:
    ConfigParameter:
       Type: 'AWS::SSM::Parameter'
       Properties:
-         Name: !Sub '/music/profiles/${Profile}/config'
+         Name: !Sub '/vibes/profiles/${Profile}'
          Type: String
-         Value: "\n"
+         Value: !Join [ "\n" , [ !Join [ "\n" , !Ref Config ] , '' ] ]
