@@ -867,6 +867,7 @@ Resources:
       Properties:
          LaunchTemplateName: vibes-worker
          LaunchTemplateData:
+            InstanceType: c5.2xlarge
             IamInstanceProfile:
                Arn: !GetAtt WorkerInstanceProfile.Arn
             KeyName: vibes-worker
@@ -894,6 +895,7 @@ Resources:
       Properties:
          LaunchTemplateName: vibes-server
          LaunchTemplateData:
+            InstanceType: m5.large
             KeyName: vibes-server
             NetworkInterfaces:
                -
