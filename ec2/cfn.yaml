@@ -135,7 +135,7 @@ Resources:
             NetworkInterfaces:
                -
                   DeviceIndex: 0
-                  GroupSet:
+                  Groups:
                      - !GetAtt BridgeInstanceSecurityGroup.GroupId
                      - !GetAtt NatSecurityGroup.GroupId
                   SubnetId: !Ref PublicSubnet
