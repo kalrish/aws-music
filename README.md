@@ -11,15 +11,19 @@ Deployment
  
  2.  Deploy a new CloudFormation stack based on the `cfn/main.yaml` template.
  
- 3.  If you chose to create a private CodeCommit repository, push the code to it.
+ 3.  Set up your git solution:
  
-     From within your clone directory:
-     
-         $  git remote add codecommit ssh://git-codecommit.eu-central-1.amazonaws.com/v1/repos/vibes
-         $  git remote add codecommit https://git-codecommit.eu-central-1.amazonaws.com/v1/repos/vibes
-         $  git push codecommit master
-     
-     You might need to configure git or the SSH client. If need be, refer to the official AWS docs.
+      -  If you chose to use a GitHub repository in your account, you'll have to connect AWS to GitHub if you haven't already.
+      
+      -  If you chose to create a private CodeCommit repository, push the code to it.
+      
+         From within your clone directory:
+         
+             $  git remote add codecommit ssh://git-codecommit.eu-central-1.amazonaws.com/v1/repos/vibes
+             $  git remote add codecommit https://git-codecommit.eu-central-1.amazonaws.com/v1/repos/vibes
+             $  git push codecommit master
+         
+         You might need to configure git or the SSH client. If need be, refer to the official AWS docs.
  
  4.  Upload your music sources to the source bucket.
  
