@@ -1,11 +1,7 @@
 AWS-based music compilation system
 ================================================================================
 
-
-What is this?
---------------------------------------------------------------------------------
-
-The 
+In this repository are two implementations, both based on the Amazon Web Services cloud platform, of the [vibes](https://www.davidjsp.eu/vibes/index) music compilation system.
 
 
 Deployment
