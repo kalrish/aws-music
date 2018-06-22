@@ -31,7 +31,7 @@ Deployment
  
  5.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each profile.
  
-     The tup configuration may be entered directly or uploaded using the AWS CLI:
+     The profile configuration may be entered directly or uploaded using the AWS CLI:
      
          $  aws ssm put-parameter --overwrite --name "/vibes/profiles/${PROFILE}" --type String --value "file://${PROFILE}.config"
  
