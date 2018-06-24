@@ -95,17 +95,11 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/vibes: 'sources'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
                         Effect: Allow
