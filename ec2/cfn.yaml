@@ -69,7 +69,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: parameters-get
+               PolicyName: parameters
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -169,13 +169,23 @@ Resources:
                               aws:RequestTag/vibes: sources
                         Effect: Allow
             -
-               PolicyName: parameters-put
+               PolicyName: launch-template
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action: 'ssm:PutParameter'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/snapshot/sources'
+                        Action:
+                           - 'ec2:DescribeLaunchTemplates'
+                           - 'ec2:DescribeLaunchTemplateVersions'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
    SourcesVolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
@@ -253,10 +263,6 @@ Resources:
                   Type: PLAINTEXT
                   Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
-                  Name: INSTANCE_AMI
-                  Type: PARAMETER_STORE
-                  Value: '/vibes/ec2/ami/volmgr'
-               -
                   Name: INSTANCE_PROFILE
                   Type: PLAINTEXT
                   Value: !Ref SourcesInstanceProfile
@@ -264,6 +270,10 @@ Resources:
                   Name: SOURCES_BUCKET
                   Type: PLAINTEXT
                   Value: !ImportValue vibes-SourcesBucket
+               -
+                  Name: WORKER_LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerLaunchTemplate
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
@@ -867,6 +877,15 @@ Resources:
             IamInstanceProfile:
                Arn: !GetAtt WorkerInstanceProfile.Arn
             KeyName: vibes-worker
+            BlockDeviceMappings:
+               -
+                  DeviceName: /dev/xvdf
+                  Ebs:
+                     DeleteOnTermination: true
+               -
+                  DeviceName: /dev/xvdg
+                  Ebs:
+                     DeleteOnTermination: true
             NetworkInterfaces:
                -
                   DeviceIndex: 0
