@@ -146,6 +146,16 @@ Resources:
                            - 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
+            -
+               PolicyName: cloudwatch
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'cloudwatch:GetMetricStatistics'
+                        Resource: '*'
+                        Effect: Allow
    SourcesVolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
