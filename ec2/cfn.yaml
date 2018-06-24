@@ -1,23 +1,30 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
-   VpcIpv4AddressBlock:
-      Description: 'IPv4 address block to assign to the VPC in CIDR format.'
-      Type: String
-      AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-   PrivateSubnetAvailabilityZone:
-      Description: 'Availability zone in which to create the private subnet. It must support CodeBuild.'
-      Type: 'AWS::EC2::AvailabilityZone::Name'
-   NatInstanceType:
-      Description: 'Type of the NAT instance.'
-      Type: String
-      Default: t2.medium
-   NatInstanceImageId:
-      Description: 'AMI ID to base the NAT instance on.'
-      Type: 'AWS::EC2::Image::Id'
-   NatInstanceKeyName:
-      Description: 'Name of the keypair to assign to the NAT instance.'
-      Type: 'AWS::EC2::KeyPair::KeyName'
+   Vpc:
+      Description: 'ID of the VPC in which to place the resources.'
+      Type: 'AWS::EC2::VPC::Id'
+   BuildSubnet:
+      Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
+      Type: 'AWS::EC2::Subnet::Id'
+   WorkerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place worker instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+   ServerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place server instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+   CodeBuildSecurityGroup:
+      Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
+      Type: 'AWS::EC2::SecurityGroup::Id'
+   BuildSecurityGroup:
+      Description: 'ID of a security group for build instances, which require Internet access.'
+      Type: 'AWS::EC2::SecurityGroup::Id'
+   WorkerSecurityGroups:
+      Description: 'ID of a security group for worker instances.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+   ServerSecurityGroups:
+      Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
    CodeRepositoryLocation:
       Description: 'Location of the build code.'
       Type: String
@@ -33,134 +40,145 @@ Mappings:
 Conditions:
    CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
-   Vpc:
-      Type: 'AWS::EC2::VPC'
+   SourcesVolumeBuildRole:
+      Type: 'AWS::IAM::Role'
       Properties:
-         CidrBlock: !Ref VpcIpv4AddressBlock
-   InternetGateway:
-      Type: 'AWS::EC2::InternetGateway'
-   InternetGatewayAttachment:
-      Type: 'AWS::EC2::VPCGatewayAttachment'
-      Properties:
-         InternetGatewayId: !Ref InternetGateway
-         VpcId: !Ref Vpc
-   PublicSubnet:
-      Type: 'AWS::EC2::Subnet'
-      Properties:
-         CidrBlock: !Select [ 1 , !Cidr [ !GetAtt Vpc.CidrBlock , 2 , 4 ] ]
-         VpcId: !Ref Vpc
-   PublicRouteTable:
-      Type: 'AWS::EC2::RouteTable'
-      Properties:
-         VpcId: !Ref Vpc
-   InternetRoute:
-      DependsOn: InternetGatewayAttachment
-      Type: 'AWS::EC2::Route'
-      Properties:
-         RouteTableId: !Ref PublicRouteTable
-         GatewayId: !Ref InternetGateway
-         DestinationCidrBlock: '0.0.0.0/0'
-   PublicRouteTableAssociation:
-      Type: 'AWS::EC2::SubnetRouteTableAssociation'
-      Properties:
-         RouteTableId: !Ref PublicRouteTable
-         SubnetId: !Ref PublicSubnet
-   BridgeInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For bridge instances.'
-         SecurityGroupIngress:
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-   BridgeSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For instances to be accessed by bridge instances.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
-#   BridgeInstanceSecurityGroupEgress:
-#      Type: 'AWS::EC2::SecurityGroupEgress'
-#      Properties:
-#         GroupId: !GetAtt BridgeInstanceSecurityGroup.GroupId
-#         DestinationSecurityGroupId: !GetAtt BridgeSecurityGroup.GroupId
-#         FromPort: 22
-#         ToPort: 22
-#         IpProtocol: tcp
-   NatSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For instances on private subnets to access the NAT instance.'
-         VpcId: !Ref Vpc
-   NatInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For the NAT instance itself.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt NatSecurityGroup.GroupId
-               FromPort: '-1'
-               ToPort: '-1'
-               IpProtocol: '-1'
-         VpcId: !Ref Vpc
-   NatInstance:
-      Type: 'AWS::EC2::Instance'
-      Properties:
-         InstanceType: !Ref NatInstanceType
-         ImageId: !Ref NatInstanceImageId
-         KeyName: !Ref NatInstanceKeyName
-         NetworkInterfaces:
-            -
-               DeviceIndex: 0
-               GroupSet:
-                  - !GetAtt BridgeSecurityGroup.GroupId
-                  - !GetAtt NatInstanceSecurityGroup.GroupId
-               SubnetId: !Ref PublicSubnet
-               AssociatePublicIpAddress: true
-         SourceDestCheck: false
-      DependsOn: InternetGatewayAttachment
-   BridgeInstanceLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
-      Properties:
-         LaunchTemplateName: vibes-bridge
-         LaunchTemplateData:
-            NetworkInterfaces:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
                -
-                  DeviceIndex: 0
-                  Groups:
-                     - !GetAtt BridgeInstanceSecurityGroup.GroupId
-                     - !GetAtt NatSecurityGroup.GroupId
-                  SubnetId: !Ref PublicSubnet
-                  AssociatePublicIpAddress: true
-   PrivateSubnet:
-      Type: 'AWS::EC2::Subnet'
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ebs-sources'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateTags'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeInstances'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ebs-sources'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource:
+                           - '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+   SourcesVolumeBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
       Properties:
-         AvailabilityZone: !Ref PrivateSubnetAvailabilityZone
-         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
-         VpcId: !Ref Vpc
-   PrivateRouteTable:
-      Type: 'AWS::EC2::RouteTable'
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${SourcesVolumeBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref SourcesVolumeBuildRole
+   SourcesVolumeBuildProject:
+      Type: 'AWS::CodeBuild::Project'
       Properties:
-         VpcId: !Ref Vpc
-   NatRoute:
-      Type: 'AWS::EC2::Route'
-      Properties:
-         RouteTableId: !Ref PrivateRouteTable
-         InstanceId: !Ref NatInstance
-         DestinationCidrBlock: 0.0.0.0/0
-   PrivateRouteTableAssociation:
-      Type: 'AWS::EC2::SubnetRouteTableAssociation'
-      Properties:
-         RouteTableId: !Ref PrivateRouteTable
-         SubnetId: !Ref PrivateSubnet
+         Name: vibes-ec2-ebs-sources
+         Description: 'Create and prepare EBS volume to store music sources.'
+         ServiceRole: !GetAtt SourcesVolumeBuildRole.Arn
+         Source:
+            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
+            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'ec2/buildspec.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: INSTANCE_AMI
+                  Type: PARAMETER_STORE
+                  Value: '/vibes/ec2/ami/volmgr'
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
    VolmgrAmiBuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
@@ -206,13 +224,13 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              aws:RequestTag/Packer: 'vibes-volmgr'
+                              aws:RequestTag/Packer: 'vibes-ami-volmgr'
                         Effect: Allow
                      -
                         Action:
                            - 'ec2:RunInstances'
                         Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
@@ -242,7 +260,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              ec2:ResourceTag/Packer: 'vibes-volmgr'
+                              ec2:ResourceTag/Packer: 'vibes-ami-volmgr'
                         Effect: Allow
                      -
                         Action:
@@ -256,26 +274,6 @@ Resources:
                         Action:
                            - 'ec2:DescribeVolumes'
                         Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: launch-template
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
-                        Resource: '*'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
-                        Effect: Allow
-                     -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
                         Effect: Allow
    VolmgrAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
@@ -353,25 +351,21 @@ Resources:
                -
                   Name: INSTANCE_SUBNET
                   Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
+                  Value: !Ref BuildSubnet
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
                -
                   Name: SOURCES_BUCKET
                   Type: PLAINTEXT
                   Value: !ImportValue vibes-SourcesBucket
-               -
-                  Name: LAUNCH_TEMPLATE
-                  Type: PLAINTEXT
-                  Value: !Ref VolmgrLaunchTemplate
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
-               - !Ref PrivateSubnet
+               - !Ref BuildSubnet
             SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
+               - !Ref CodeBuildSecurityGroup
                - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
@@ -421,13 +415,13 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              aws:RequestTag/Packer: 'vibes-worker'
+                              aws:RequestTag/Packer: 'vibes-ami-worker'
                         Effect: Allow
                      -
                         Action:
                            - 'ec2:RunInstances'
                         Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
@@ -463,7 +457,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              ec2:ResourceTag/Packer: 'vibes-worker'
+                              ec2:ResourceTag/Packer: 'vibes-ami-worker'
                         Effect: Allow
                      -
                         Action:
@@ -569,11 +563,11 @@ Resources:
                -
                   Name: INSTANCE_SUBNET
                   Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
+                  Value: !Ref BuildSubnet
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
                -
                   Name: INSTANCE_PROFILE
                   Type: PLAINTEXT
@@ -589,9 +583,9 @@ Resources:
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
-               - !Ref PrivateSubnet
+               - !Ref BuildSubnet
             SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
+               - !Ref CodeBuildSecurityGroup
                - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
@@ -641,13 +635,13 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              aws:RequestTag/Packer: 'vibes-server'
+                              aws:RequestTag/Packer: 'vibes-ami-server'
                         Effect: Allow
                      -
                         Action:
                            - 'ec2:RunInstances'
                         Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
@@ -677,7 +671,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
-                              ec2:ResourceTag/Packer: 'vibes-server'
+                              ec2:ResourceTag/Packer: 'vibes-ami-server'
                         Effect: Allow
                      -
                         Action:
@@ -756,11 +750,11 @@ Resources:
                -
                   Name: INSTANCE_SUBNET
                   Type: PLAINTEXT
-                  Value: !Ref PrivateSubnet
+                  Value: !Ref BuildSubnet
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${NatSecurityGroup.GroupId},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
@@ -772,9 +766,9 @@ Resources:
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
-               - !Ref PrivateSubnet
+               - !Ref BuildSubnet
             SecurityGroupIds:
-               - !GetAtt NatSecurityGroup.GroupId
+               - !Ref CodeBuildSecurityGroup
                - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
@@ -810,6 +804,7 @@ Resources:
                   Resource: !ImportValue vibes-CodeRepositoryArn
                   Effect: Allow
          Roles:
+            - !Ref SourcesVolumeBuildRole
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref WorkerInstanceRole
@@ -838,30 +833,14 @@ Resources:
                   Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                   Condition:
                      StringEquals:
-                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${PrivateSubnet}'
+                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                         ec2:AuthorizedService: 'codebuild.amazonaws.com'
                   Effect: Allow
          Roles:
+            - !Ref SourcesVolumeBuildRole
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
-   VolmgrLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
-      Properties:
-         LaunchTemplateName: vibes-volmgr
-         LaunchTemplateData:
-            IamInstanceProfile:
-               Arn: !GetAtt VolmgrInstanceProfile.Arn
-            KeyName: vibes-volmgr
-            NetworkInterfaces:
-               -
-                  DeviceIndex: 0
-                  Groups:
-                     - !GetAtt NatSecurityGroup.GroupId
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                  SubnetId: !Ref PrivateSubnet
-                  AssociatePublicIpAddress: false
-            InstanceInitiatedShutdownBehavior: terminate
    WorkerLaunchTemplate:
       Type: 'AWS::EC2::LaunchTemplate'
       Properties:
@@ -874,22 +853,9 @@ Resources:
             NetworkInterfaces:
                -
                   DeviceIndex: 0
-                  Groups:
-                     - !GetAtt NatSecurityGroup.GroupId
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                  SubnetId: !Ref PrivateSubnet
+                  Groups: !Ref WorkerSecurityGroups
+                  SubnetId: !Ref WorkerSubnet
                   AssociatePublicIpAddress: false
-   ServerInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For the server instance to be accessible.'
-         SecurityGroupIngress:
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: 873
-               ToPort: 873
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
    ServerLaunchTemplate:
       Type: 'AWS::EC2::LaunchTemplate'
       Properties:
@@ -900,8 +866,6 @@ Resources:
             NetworkInterfaces:
                -
                   DeviceIndex: 0
-                  Groups:
-                     - !GetAtt BridgeSecurityGroup.GroupId
-                     - !GetAtt ServerInstanceSecurityGroup.GroupId
-                  SubnetId: !Ref PublicSubnet
+                  Groups: !Ref ServerSecurityGroups
+                  SubnetId: !Ref ServerSubnet
                   AssociatePublicIpAddress: true

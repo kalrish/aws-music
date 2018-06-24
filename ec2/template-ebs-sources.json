@@ -1,0 +1,51 @@
+{
+	"variables": {
+		"ami": "{{ env `INSTANCE_AMI` }}",
+		"instance_type": "t2.micro",
+		"region": "{{ env `AWS_REGION` }}",
+		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
+		"size": "{{ env `SIZE` }}",
+		"ssh_user": "root",
+		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
+		"vpc_id": "{{ env `INSTANCE_VPC` }}"
+	},
+	"provisioners": [
+		{
+			"type": "shell",
+			"script": "ebs-prepare-sources.sh",
+			"execute_command": "/usr/bin/bash -ex -- {{ .Path }} {{ user `sources_bucket` }}"
+		}
+	],
+	"builders": [
+		{
+			"type": "amazon-ebsvolume",
+			"associate_public_ip_address": false,
+			"ebs_volumes": [
+				{
+					"device_name": "/dev/xvdf",
+					"volume_size": "{{ user `size` }}"
+				}
+			],
+			"instance_type": "{{ user `instance_type` }}",
+			"region": "{{ user `region` }}",
+			"run_tags": {
+				"Packer": "vibes-ebs-sources"
+			},
+			"security_group_ids": "{{ user `security_group_ids` }}",
+			"source_ami": "{{ user `ami` }}",
+			"ssh_interface": "private_ip",
+			"ssh_keypair_name": "vibes-packer",
+			"ssh_private_key_file": "vibes-packer.pem",
+			"ssh_username": "{{ user `ssh_user` }}",
+			"subnet_id": "{{ user `subnet_id` }}",
+			"vpc_id": "{{ user `vpc_id` }}"
+		}
+	],
+	"post-processors": [
+		{
+			"type": "manifest",
+			"output": "manifest.json",
+			"strip_path": true
+		}
+	]
+}

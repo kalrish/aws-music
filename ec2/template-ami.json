@@ -1,0 +1,72 @@
+{
+	"variables": {
+		"code_repository": "{{ env `CODE_REPOSITORY` }}",
+		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
+		"instance_type": "t2.micro",
+		"name": "{{ env `NAME` }}",
+		"region": "{{ env `AWS_REGION` }}",
+		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
+		"sources_bucket": "{{ env `SOURCES_BUCKET` }}",
+		"ssh_user": "root",
+		"subnet_id": "{{ env `INSTANCE_SUBNET` }}",
+		"vpc_id": "{{ env `INSTANCE_VPC` }}"
+	},
+	"provisioners": [
+		{
+			"type": "shell",
+			"script": "ami-prepare.sh"
+		},
+		{
+			"type": "ansible",
+			"playbook_file": "playbook-{{ user `name` }}.yaml",
+			"groups": [
+				"common"
+			],
+			"user": "{{ user `ssh_user` }}",
+			"extra_arguments": [
+				"-vv",
+				"--extra-vars",
+				"code_repo={{ user `code_repository` }}"
+			]
+		}
+	],
+	"builders": [
+		{
+			"type": "amazon-ebs",
+			"ami_name": "vibes-{{ user `name` }} {{ isotime \"2006-01-02-15-04-05\" }}",
+			"ami_virtualization_type": "hvm",
+			"associate_public_ip_address": false,
+			"iam_instance_profile": "{{ user `instance_profile` }}",
+			"instance_type": "{{ user `instance_type` }}",
+			"region": "{{ user `region` }}",
+			"run_tags": {
+				"Packer": "vibes-ami-{{ user `name` }}"
+			},
+			"security_group_ids": "{{ user `security_group_ids` }}",
+			"source_ami_filter": {
+				"filters": {
+					"name": "arch-linux-hvm-*.x86_64-ebs",
+					"root-device-type": "ebs",
+					"virtualization-type": "hvm"
+				},
+				"owners": [
+					"093273469852"
+				],
+				"most_recent": true
+			},
+			"ssh_interface": "private_ip",
+			"ssh_keypair_name": "vibes-packer",
+			"ssh_private_key_file": "vibes-packer.pem",
+			"ssh_username": "{{ user `ssh_user` }}",
+			"subnet_id": "{{ user `subnet_id` }}",
+			"vpc_id": "{{ user `vpc_id` }}"
+		}
+	],
+	"post-processors": [
+		{
+			"type": "manifest",
+			"output": "manifest.json",
+			"strip_path": true
+		}
+	]
+}

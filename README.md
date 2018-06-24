@@ -3,6 +3,8 @@ AWS-based music compilation system
 
 In this repository are two implementations, both based on the Amazon Web Services cloud platform, of the [vibes](https://www.davidjsp.eu/vibes/index) music compilation system.
 
+The compilation of a [vibes]() collection requires quite some compute power and storage space. Use AWS for that.
+
 
 Deployment
 --------------------------------------------------------------------------------

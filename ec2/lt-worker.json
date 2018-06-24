@@ -1,0 +1,18 @@
+{
+	"BlockDeviceMappings": [
+		{
+			"DeviceName": "/dev/xvdf",
+			"Ebs": {
+				"SnapshotId": "%SOURCES_SNAPSHOT_ID%",
+				"DeleteOnTermination": true
+			}
+		},
+		{
+			"DeviceName": "/dev/xvdg",
+			"Ebs": {
+				"SnapshotId": "%BUILDS_SNAPSHOT_ID%",
+				"DeleteOnTermination": true
+			}
+		}
+	]
+}

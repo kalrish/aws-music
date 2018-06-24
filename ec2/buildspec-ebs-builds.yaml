@@ -1,0 +1,17 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - test ${SIZE+x}
+         - cd ec2
+         - packer build template-ebs-builds.json
+         - cat -- manifest.json
+         - |
+            BUILDS_VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
+         - BUILDS_SNAPSHOT_ID="$(aws --query '.SnapshotId' --output text ec2 create-snapshot --volume-id "${BUILDS_VOLUME_ID}")"
+         - aws ssm put-parameter --overwrite --name '/vibes/ec2/snapshot/builds' --type String --value "${BUILDS_SNAPSHOT_ID}"
+         - LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${LAUNCH_TEMPLATE}")"
+         - LAUNCH_TEMPLATE_NEW="$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-id "${LAUNCH_TEMPLATE}" --source-version "${LAUNCH_TEMPLATE_LAST}" --launch-template-data "$(sed -e "s/%SOURCES_SNAPSHOT_ID%/${SOURCES_SNAPSHOT_ID}/g;s/%BUILDS_SNAPSHOT_ID%/${BUILDS_SNAPSHOT_ID}/g" -- lt-worker.json)")"
+         - echo "Updated worker launch template version: $(aws --query 'LaunchTemplate.DefaultVersionNumber' --output text ec2 modify-launch-template --launch-template-id "${LAUNCH_TEMPLATE}" --default-version "${LAUNCH_TEMPLATE_NEW}")"
