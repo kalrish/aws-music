@@ -5,6 +5,7 @@ phases:
    build:
       commands:
          - cd ec2
+         - NOW="$(date +%s)"
          - packer build -var "size=$(( $(aws --query 'Datapoints[0].Average' --output text cloudwatch get-metric-statistics --namespace AWS/S3 --start-time "$((${NOW}-86400))" --end-time "${NOW}" --period 86400 --statistics Average --metric-name BucketSizeBytes --dimensions "Name=BucketName,Value=${SOURCES_BUCKET}" Name=StorageType,Value=StandardStorage | cut -d . -f 1) / 1073741824 + 2 ))" template-ebs-sources.json
          - cat -- manifest.json
          - |

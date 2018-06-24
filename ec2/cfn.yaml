@@ -195,6 +195,10 @@ Resources:
                   Name: INSTANCE_AMI
                   Type: PARAMETER_STORE
                   Value: '/vibes/ec2/ami/volmgr'
+               -
+                  Name: SOURCES_BUCKET
+                  Type: PLAINTEXT
+                  Value: !ImportValue vibes-SourcesBucket
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
