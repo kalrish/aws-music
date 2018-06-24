@@ -11,6 +11,7 @@
      - e2fsprogs
      - f2fs-tools
      - openssh
+     - python
      - tup
      - xfsprogs
 - name: Download pip installation script
