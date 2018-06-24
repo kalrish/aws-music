@@ -24,7 +24,10 @@
 			"ebs_volumes": [
 				{
 					"device_name": "/dev/xvdf",
-					"volume_size": "{{ user `size` }}"
+					"volume_size": "{{ user `size` }}",
+					"tags": {
+						"vibes": "sources"
+					}
 				}
 			],
 			"iam_instance_profile": "{{ user `instance_profile` }}",
