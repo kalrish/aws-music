@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"ami": "{{ env `INSTANCE_AMI` }}",
+		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.micro",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
@@ -26,6 +27,7 @@
 					"volume_size": "{{ user `size` }}"
 				}
 			],
+			"iam_instance_profile": "{{ user `instance_profile` }}",
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {

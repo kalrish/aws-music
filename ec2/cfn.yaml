@@ -172,6 +172,38 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref SourcesVolumeBuildRole
+   SourcesInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: sources
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 's3:ListBucket'
+                        Resource: !ImportValue vibes-SourcesBucketArn
+                        Effect: Allow
+                     -
+                        Action:
+                           - 's3:GetObject'
+                        Resource: !Join [ '/', [ !ImportValue vibes-SourcesBucketArn, '*' ] ]
+                        Effect: Allow
+   SourcesInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref SourcesInstanceRole
    SourcesVolumeBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
@@ -205,6 +237,10 @@ Resources:
                   Name: INSTANCE_AMI
                   Type: PARAMETER_STORE
                   Value: '/vibes/ec2/ami/volmgr'
+               -
+                  Name: INSTANCE_PROFILE
+                  Type: PLAINTEXT
+                  Value: !Ref SourcesInstanceProfile
                -
                   Name: SOURCES_BUCKET
                   Type: PLAINTEXT
