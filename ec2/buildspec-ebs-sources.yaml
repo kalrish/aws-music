@@ -9,6 +9,7 @@ phases:
          - SIZE="$(( $(aws --query 'Datapoints[0].Average' --output text cloudwatch get-metric-statistics --namespace AWS/S3 --start-time "$((${NOW}-86400))" --end-time "${NOW}" --period 86400 --statistics Average --metric-name BucketSizeBytes --dimensions "Name=BucketName,Value=${SOURCES_BUCKET}" Name=StorageType,Value=StandardStorage | cut -d . -f 1) / 1073741824 + 2 ))"
          - |
             echo "Sources bucket size: ${SIZE} GiB"
+         #  User variables do not seem to play well with numeric parameters
          - bash -c 'packer build <(jq -c ".builders[0].ebs_volumes[0].volume_size=${SIZE}" -- template-ebs-sources.json)'
          - cat -- manifest.json
          - |
