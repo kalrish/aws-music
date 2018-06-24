@@ -40,6 +40,22 @@ Mappings:
 Conditions:
    CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
+   BuildContainerSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
+         VpcId: !Ref Vpc
+   BuildInstanceSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
+         SecurityGroupIngress:
+            -
+               SourceSecurityGroupId: !GetAtt BuildContainerSecurityGroup.GroupId
+               FromPort: 22
+               ToPort: 22
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
    SourcesVolumeBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -52,6 +68,16 @@ Resources:
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
+            -
+               PolicyName: parameters
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ssm:GetParameters'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
             -
                PolicyName: packer
                PolicyDocument:
@@ -164,7 +190,7 @@ Resources:
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${BuildSecurityGroup},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
                   Name: INSTANCE_AMI
                   Type: PARAMETER_STORE
@@ -175,26 +201,17 @@ Resources:
                - !Ref BuildSubnet
             SecurityGroupIds:
                - !Ref CodeBuildSecurityGroup
-               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+               - !GetAtt BuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
-   VolmgrAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
+   VolmgrAmiParameter:
+      Type: 'AWS::SSM::Parameter'
       Properties:
-         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
-         VpcId: !Ref Vpc
-   VolmgrAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
+         Name: '/vibes/ec2/ami/volmgr'
+         Type: String
+         Description: 'ID of the vibes volume manager AMI.'
+         Value: dummy
    VolmgrAmiBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -355,7 +372,7 @@ Resources:
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${BuildSecurityGroup},${VolmgrAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
                   Name: SOURCES_BUCKET
                   Type: PLAINTEXT
@@ -366,26 +383,10 @@ Resources:
                - !Ref BuildSubnet
             SecurityGroupIds:
                - !Ref CodeBuildSecurityGroup
-               - !GetAtt VolmgrAmiBuildContainerSecurityGroup.GroupId
+               - !GetAtt BuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
-   WorkerAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For CodeBuild to access worker AMI build instances.'
-         VpcId: !Ref Vpc
-   WorkerAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For worker AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
    WorkerAmiBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -567,7 +568,7 @@ Resources:
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${BuildSecurityGroup},${WorkerAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
                   Name: INSTANCE_PROFILE
                   Type: PLAINTEXT
@@ -586,26 +587,10 @@ Resources:
                - !Ref BuildSubnet
             SecurityGroupIds:
                - !Ref CodeBuildSecurityGroup
-               - !GetAtt WorkerAmiBuildContainerSecurityGroup.GroupId
+               - !GetAtt BuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
-   ServerAmiBuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For CodeBuild to access server AMI build instances.'
-         VpcId: !Ref Vpc
-   ServerAmiBuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For server AMI build instances to be accessed by CodeBuild.'
-         SecurityGroupIngress:
-            -
-               SourceSecurityGroupId: !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
-               FromPort: 22
-               ToPort: 22
-               IpProtocol: tcp
-         VpcId: !Ref Vpc
    ServerAmiBuildRole:
       Type: 'AWS::IAM::Role'
       Properties:
@@ -754,7 +739,7 @@ Resources:
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${BuildSecurityGroup},${ServerAmiBuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
@@ -769,7 +754,7 @@ Resources:
                - !Ref BuildSubnet
             SecurityGroupIds:
                - !Ref CodeBuildSecurityGroup
-               - !GetAtt ServerAmiBuildContainerSecurityGroup.GroupId
+               - !GetAtt BuildContainerSecurityGroup.GroupId
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
