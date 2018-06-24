@@ -171,9 +171,6 @@ Resources:
                         Action:
                            - 'ec2:CreateSnapshot'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                        Condition:
-                           StringEquals:
-                              ec2:Region: !Ref 'AWS::Region'
                         Effect: Allow
                      -
                         Action:
@@ -182,7 +179,6 @@ Resources:
                         Condition:
                            StringEquals:
                               aws:RequestTag/vibes: sources
-                              ec2:Region: !Ref 'AWS::Region'
                         Effect: Allow
    SourcesVolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
