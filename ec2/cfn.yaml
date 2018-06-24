@@ -146,7 +146,7 @@ Resources:
             Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
             Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-ebs-sources.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -333,7 +333,7 @@ Resources:
             Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
             Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-ami.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -545,7 +545,7 @@ Resources:
             Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
             Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-ami.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -732,7 +732,7 @@ Resources:
             Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
             Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'ec2/buildspec.yaml'
+            BuildSpec: 'ec2/buildspec-ami.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
