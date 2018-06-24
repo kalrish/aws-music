@@ -14,7 +14,7 @@ phases:
          - cat -- manifest.json
          - |
             SOURCES_VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
-         - SOURCES_SNAPSHOT_ID="$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id "${SOURCES_VOLUME_ID}")"
+         - SOURCES_SNAPSHOT_ID="$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id "${SOURCES_VOLUME_ID}" --tag-specifications 'ResourceType=snapshot,Tags=[{Key=vibes,Value=sources}]')"
          - aws ssm put-parameter --overwrite --name '/vibes/ec2/snapshot/sources' --type String --value "${SOURCES_SNAPSHOT_ID}"
          - LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${LAUNCH_TEMPLATE}")"
          - LAUNCH_TEMPLATE_NEW="$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-id "${LAUNCH_TEMPLATE}" --source-version "${LAUNCH_TEMPLATE_LAST}" --launch-template-data "$(sed -e "s/%SOURCES_SNAPSHOT_ID%/${SOURCES_SNAPSHOT_ID}/g;s/%BUILDS_SNAPSHOT_ID%/${BUILDS_SNAPSHOT_ID}/g" -- lt-worker.json)")"
