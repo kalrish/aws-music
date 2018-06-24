@@ -292,6 +292,16 @@ Resources:
                            - 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
+            -
+               PolicyName: ami-parameter
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ssm:PutParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
    VolmgrAmiBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
