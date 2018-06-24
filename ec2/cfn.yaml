@@ -69,7 +69,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: parameters
+               PolicyName: parameters-get
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -167,6 +167,15 @@ Resources:
                            StringEquals:
                               ec2:CreateAction: 'CreateSnapshot'
                               aws:RequestTag/vibes: sources
+                        Effect: Allow
+            -
+               PolicyName: parameters-put
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:PutParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/snapshot/sources'
                         Effect: Allow
    SourcesVolumeBuildLogsPolicy:
       Type: 'AWS::IAM::Policy'
@@ -335,22 +344,19 @@ Resources:
                            - 'ec2:CreateImage'
                            - 'ec2:RegisterImage'
                            - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
+                        Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:DescribeVolumes'
+                        Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: ami-parameter
+               PolicyName: parameters
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ssm:PutParameter'
+                        Action: 'ssm:PutParameter'
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
                         Effect: Allow
    VolmgrAmiBuildLogsPolicy:
@@ -387,13 +393,11 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 's3:ListBucket'
+                        Action: 's3:ListBucket'
                         Resource: !ImportValue vibes-SourcesBucketArn
                         Effect: Allow
                      -
-                        Action:
-                           - 's3:GetObject'
+                        Action: 's3:GetObject'
                         Resource: !Join [ '/', [ !ImportValue vibes-SourcesBucketArn, '*' ] ]
                         Effect: Allow
    VolmgrInstanceProfile:
@@ -466,22 +470,18 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ec2:DescribeImages'
+                        Action: 'ec2:DescribeImages'
                         Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               aws:RequestTag/Packer: 'vibes-ami-worker'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:RunInstances'
+                        Action: 'ec2:RunInstances'
                         Resource:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
@@ -491,32 +491,25 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               ec2:CreateAction: 'RunInstances'
                         Effect: Allow
                      -
-                        Action:
-                           - 'iam:PassRole'
-                        Resource:
-                           - !GetAtt WorkerInstanceRole.Arn
+                        Action: 'iam:PassRole'
+                        Resource: !GetAtt WorkerInstanceRole.Arn
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
                         Effect: Allow
                      -
                         Action:
                            - 'ec2:StopInstances'
                            - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               ec2:ResourceTag/Packer: 'vibes-ami-worker'
@@ -526,12 +519,10 @@ Resources:
                            - 'ec2:CreateImage'
                            - 'ec2:RegisterImage'
                            - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
+                        Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:DescribeVolumes'
+                        Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
             -
@@ -540,18 +531,15 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
+                        Action: 'ec2:DescribeLaunchTemplates'
                         Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
+                        Action: 'ec2:CreateLaunchTemplateVersion'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
+                        Action: 'ec2:ModifyLaunchTemplate'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
    WorkerAmiBuildLogsPolicy:
@@ -588,8 +576,7 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ssm:GetParametersByPath'
+                        Action: 'ssm:GetParametersByPath'
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
                         Effect: Allow
    WorkerInstanceProfile:
@@ -670,22 +657,18 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ec2:DescribeImages'
+                        Action: 'ec2:DescribeImages'
                         Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:RunInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               aws:RequestTag/Packer: 'vibes-ami-server'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:RunInstances'
+                        Action: 'ec2:RunInstances'
                         Resource:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
@@ -695,26 +678,21 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               ec2:CreateAction: 'RunInstances'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:DescribeInstances'
-                        Resource:
-                           - '*'
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
                         Effect: Allow
                      -
                         Action:
                            - 'ec2:StopInstances'
                            - 'ec2:TerminateInstances'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               ec2:ResourceTag/Packer: 'vibes-ami-server'
@@ -724,12 +702,10 @@ Resources:
                            - 'ec2:CreateImage'
                            - 'ec2:RegisterImage'
                            - 'ec2:ModifyImageAttribute'
-                        Resource:
-                           - '*'
+                        Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:DescribeVolumes'
+                        Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
             -
@@ -738,18 +714,15 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action:
-                           - 'ec2:DescribeLaunchTemplates'
+                        Action: 'ec2:DescribeLaunchTemplates'
                         Resource: '*'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:CreateLaunchTemplateVersion'
+                        Action: 'ec2:CreateLaunchTemplateVersion'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
                         Effect: Allow
                      -
-                        Action:
-                           - 'ec2:ModifyLaunchTemplate'
+                        Action: 'ec2:ModifyLaunchTemplate'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
                         Effect: Allow
    ServerAmiBuildLogsPolicy:
@@ -845,8 +818,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
                -
-                  Action:
-                     - 'codecommit:GitPull'
+                  Action: 'codecommit:GitPull'
                   Resource: !ImportValue vibes-CodeRepositoryArn
                   Effect: Allow
          Roles:
@@ -874,8 +846,7 @@ Resources:
                   Resource: '*'
                   Effect: Allow
                -
-                  Action:
-                     - 'ec2:CreateNetworkInterfacePermission'
+                  Action: 'ec2:CreateNetworkInterfacePermission'
                   Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                   Condition:
                      StringEquals:
