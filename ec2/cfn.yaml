@@ -105,12 +105,14 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
-                        Resource:
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                         Condition:
                            StringEquals:
                               ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                         Effect: Allow
                      -
                         Action: 'iam:PassRole'
