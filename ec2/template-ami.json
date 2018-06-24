@@ -14,7 +14,8 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"script": "ami-prepare.sh"
+			"script": "ami-prepare.sh",
+			"execute_command": "/usr/bin/bash -ex -- {{ .Path }}"
 		},
 		{
 			"type": "ansible",
