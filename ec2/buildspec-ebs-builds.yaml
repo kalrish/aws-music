@@ -6,9 +6,11 @@ env:
       INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
 
 phases:
-   build:
+   pre_build:
       commands:
          - test ${SIZE+x}
+   build:
+      commands:
          - cd ec2
          - packer build template-ebs-builds.json
          - cat -- manifest.json
