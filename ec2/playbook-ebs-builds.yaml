@@ -1,0 +1,5 @@
+---
+- name: Provision builds EBS volume
+  hosts: all
+  roles:
+     - builds

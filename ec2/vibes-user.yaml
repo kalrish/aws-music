@@ -1,16 +1,16 @@
 ---
 - name: Create working group
   group:
-     name: music
+     name: vibes
      state: present
-     gid: '{{ music_gid }}'
+     gid: '{{ vibes_gid }}'
      system: yes
 - name: Create working user
   user:
-     name: music
+     name: vibes
      state: present
-     uid: '{{ music_uid }}'
-     group: music
+     uid: '{{ vibes_uid }}'
+     group: vibes
      system: yes
-     home: '{{ music_home }}'
+     home: '{{ vibes_home }}'
      create_home: yes

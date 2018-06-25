@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"ami": "{{ env `INSTANCE_AMI` }}",
+		"device_name": "/dev/xvdf",
 		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.micro",
 		"region": "{{ env `AWS_REGION` }}",
@@ -23,7 +24,7 @@
 			"associate_public_ip_address": false,
 			"ebs_volumes": [
 				{
-					"device_name": "/dev/xvdf",
+					"device_name": "{{ user `device_name` }}",
 					"volume_size": "{{ user `size` }}",
 					"tags": {
 						"vibes": "sources"

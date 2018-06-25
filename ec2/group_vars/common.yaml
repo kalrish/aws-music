@@ -1,4 +1,4 @@
 ---
-music_uid: 1013
-music_gid: 1024
-music_home: /var/opt/music
+vibes_uid: 1013
+vibes_gid: 1024
+vibes_home: /var/opt/vibes

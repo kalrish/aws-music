@@ -1,0 +1,27 @@
+---
+- name: Create mount point
+  file:
+     path: '{{ mount_point }}'
+     state: directory
+     owner: root
+     group: root
+     mode: 0000
+- name: Format volume
+  filesystem:
+     dev: /dev/xvdf
+     fstype: ext4
+     opts: -v -t ext4 -I 128 -b 4096 -m 0 -E lazy_itable_init=0,lazy_journal_init=0
+- name: Mount volume
+  mount:
+     src: /dev/xvdf
+     path: '{{ mount_point }}'
+     state: mounted
+     fstype: ext4
+- name: Download music sources
+  command: 'aws s3 cp --recursive s3://{{ sources_bucket }} {{ mount_point }}'
+  become: yes
+  become_user: '{{ vibes_uid }}'
+- name: Unmount volume
+  mount:
+     path: '{{ mount_point }}'
+     state: unmounted

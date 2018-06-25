@@ -1,6 +1,10 @@
 ---
 version: 0.2
 
+env:
+   parameter-store:
+      INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
+
 phases:
    build:
       commands:
@@ -9,10 +13,11 @@ phases:
          - packer build template-ebs-builds.json
          - cat -- manifest.json
          - |
-            BUILDS_VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
-         - BUILDS_SNAPSHOT_ID="$(aws --query '.SnapshotId' --output text ec2 create-snapshot --volume-id "${BUILDS_VOLUME_ID}")"
-         - aws ssm put-parameter --overwrite --name '/vibes/ec2/snapshot/builds' --type String --value "${BUILDS_SNAPSHOT_ID}"
-         - LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${LAUNCH_TEMPLATE}")"
-         - LAUNCH_TEMPLATE_NEW="$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-id "${LAUNCH_TEMPLATE}" --source-version "${LAUNCH_TEMPLATE_LAST}" --launch-template-data "$(sed -e "s/%SOURCES_SNAPSHOT_ID%/${SOURCES_SNAPSHOT_ID}/g;s/%BUILDS_SNAPSHOT_ID%/${BUILDS_SNAPSHOT_ID}/g" -- lt-worker.json)")"
+            VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
+         - SNAPSHOT_ID="$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id "${VOLUME_ID}" --tag-specifications 'ResourceType=snapshot,Tags=[{Key=vibes,Value=builds}]')"
+         - WORKER_LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${WORKER_LAUNCH_TEMPLATE}")"
+         - WORKER_LAUNCH_TEMPLATE_NEW="$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-id "${WORKER_LAUNCH_TEMPLATE}" --launch-template-data "$(aws --query 'LaunchTemplateVersions[0].LaunchTemplateData' --output json ec2 describe-launch-template-versions --launch-template-id ${WORKER_LAUNCH_TEMPLATE} --versions ${WORKER_LAUNCH_TEMPLATE_LAST} | jq -c ".BlockDeviceMappings[1].Ebs.SnapshotId=\"${SNAPSHOT_ID}\"")")"
          - |
-            echo "Updated worker launch template version: $(aws --query 'LaunchTemplate.DefaultVersionNumber' --output text ec2 modify-launch-template --launch-template-id "${LAUNCH_TEMPLATE}" --default-version "${LAUNCH_TEMPLATE_NEW}")"
+            echo "Updated worker launch template version: $(aws --query 'LaunchTemplate.DefaultVersionNumber' --output text ec2 modify-launch-template --launch-template-id "${WORKER_LAUNCH_TEMPLATE}" --default-version "${WORKER_LAUNCH_TEMPLATE_NEW}")"
+      finally:
+         - aws ec2 delete-volume --volume-id "${VOLUME_ID}"

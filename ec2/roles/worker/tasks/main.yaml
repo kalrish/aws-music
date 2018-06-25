@@ -80,8 +80,8 @@
   file:
      path: '{{ work_dir }}'
      state: directory
-     owner: music
-     group: music
+     owner: vibes
+     group: vibes
      mode: u=rwx,g=rwx,o=rx
 - name: Set up work directory
   mount:

@@ -1,6 +1,7 @@
 {
 	"variables": {
 		"ami": "{{ env `INSTANCE_AMI` }}",
+		"device_name": "/dev/xvdf",
 		"instance_type": "t2.micro",
 		"region": "{{ env `AWS_REGION` }}",
 		"security_group_ids": "{{ env `INSTANCE_SECURITY_GROUPS` }}",
@@ -11,13 +12,8 @@
 	},
 	"provisioners": [
 		{
-			"type": "shell",
-			"script": "ebs-prepare-builds.sh",
-			"execute_command": "/usr/bin/bash -ex -- {{ .Path }}"
-		},
-		{
 			"type": "ansible",
-			"playbook_file": "playbook-{{ user `name` }}.yaml",
+			"playbook_file": "playbook-ebs-builds.yaml",
 			"groups": [
 				"common"
 			],
@@ -33,14 +29,17 @@
 			"associate_public_ip_address": false,
 			"ebs_volumes": [
 				{
-					"device_name": "/dev/xvdf",
-					"volume_size": "{{ user `size` }}"
+					"device_name": "{{ user `device_name` }}",
+					"volume_size": "{{ user `size` }}",
+					"tags": {
+						"vibes": "builds"
+					}
 				}
 			],
 			"instance_type": "{{ user `instance_type` }}",
 			"region": "{{ user `region` }}",
 			"run_tags": {
-				"Packer": "vibes-{{ user `name` }}"
+				"Packer": "vibes-ebs-builds"
 			},
 			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami": "{{ user `ami` }}",
