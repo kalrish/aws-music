@@ -12,7 +12,8 @@ phases:
    build:
       commands:
          - cd ec2
-         - packer build template-ebs-builds.json
+         #  User variables do not seem to play well with numeric parameters
+         - bash -c 'packer build <(jq -c ".builders[0].ebs_volumes[0].volume_size=${SIZE}" -- template-ebs-builds.json)'
          - cat -- manifest.json
          - |
             VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
