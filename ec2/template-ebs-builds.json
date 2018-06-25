@@ -19,7 +19,9 @@
 			],
 			"user": "{{ user `ssh_user` }}",
 			"extra_arguments": [
-				"-vv"
+				"-vv",
+				"--extra-vars",
+				"device_name={{ user `device_name` }}"
 			]
 		}
 	],
