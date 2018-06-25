@@ -45,7 +45,7 @@
 			},
 			"security_group_ids": "{{ user `security_group_ids` }}",
 			"source_ami": "{{ user `ami` }}",
-			"ssh_private_ip": true,
+			"ssh_interface": "private_ip",
 			"ssh_keypair_name": "vibes-packer",
 			"ssh_private_key_file": "vibes-packer.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
