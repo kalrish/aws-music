@@ -1,27 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Parameters:
-   CodeRepositoryLocation:
-      Description: 'Location of the build code.'
-      Type: String
-      AllowedValues:
-         - GitHub
-         - CodeCommit
-      Default: GitHub
-   CodeRepositoryGitHubCloneUrlHttp:
-      Description: 'HTTP clone URL of the GitHub repository.'
-      Type: String
-      Default: 'https://github.com/kalrish/aws-vibes.git'
-Conditions:
-   CodeRepositoryLocationGitHub: !Equals [ !Ref CodeRepositoryLocation , 'GitHub' ]
-   CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
 Resources:
-   CodeRepository:
-      Condition: CodeRepositoryLocationCodeCommit
-      Type: 'AWS::CodeCommit::Repository'
-      Properties:
-         RepositoryName: vibes
-         RepositoryDescription: 'AWS-based music compilation system.'
    SourcesBucket:
       Type: 'AWS::S3::Bucket'
       Properties:
@@ -30,29 +9,6 @@ Resources:
                Key: vibes
                Value: sources
 Outputs:
-   CodeRepositoryLocation:
-      Description: 'Location of the build code.'
-      Value: !Ref CodeRepositoryLocation
-      Export:
-         Name: vibes-CodeRepositoryLocation
-   CodeRepositoryGitHubCloneUrlHttp:
-      Condition: CodeRepositoryLocationGitHub
-      Description: 'HTTP clone URL of the code repository.'
-      Value: !Ref CodeRepositoryGitHubCloneUrlHttp
-      Export:
-         Name: vibes-CodeRepositoryCloneUrlHttp
-   CodeRepositoryArn:
-      Condition: CodeRepositoryLocationCodeCommit
-      Description: 'ARN of the code repository.'
-      Value: !GetAtt CodeRepository.Arn
-      Export:
-         Name: vibes-CodeRepositoryArn
-   CodeRepositoryCodeCommitCloneUrlHttp:
-      Condition: CodeRepositoryLocationCodeCommit
-      Description: 'HTTP clone URL of the code repository.'
-      Value: !GetAtt CodeRepository.CloneUrlHttp
-      Export:
-         Name: vibes-CodeRepositoryCloneUrlHttp
    SourcesBucket:
       Description: 'Name of the source bucket.'
       Value: !Ref SourcesBucket

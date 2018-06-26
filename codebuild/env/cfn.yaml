@@ -1,20 +1,10 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
-   CodeRepositoryLocation:
-      Description: 'Location of the build code.'
+   CodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the GitHub repository.'
       Type: String
-      AllowedValues:
-         - GitHub
-         - CodeCommit
-      Default: GitHub
-Mappings:
-   CodeRepositoryMap:
-      Location:
-         GitHub: GITHUB
-         CodeCommit: CODECOMMIT
-Conditions:
-   CodeRepositoryLocationCodeCommit: !Equals [ !Ref CodeRepositoryLocation , 'CodeCommit' ]
+      Default: 'https://github.com/kalrish/aws-vibes.git'
 Resources:
    BuildRole:
       Type: 'AWS::IAM::Role'
@@ -70,21 +60,6 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref BuildRole
-   CodeCommitPolicy:
-      Condition: CodeRepositoryLocationCodeCommit
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: codecommit-pull
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'codecommit:GitPull'
-                  Resource: !ImportValue vibes-CodeRepositoryArn
-                  Effect: Allow
-         Roles:
-            - !Ref BuildRole
    ContainerRepository:
       Type: 'AWS::ECR::Repository'
       Properties:
@@ -136,8 +111,8 @@ Resources:
          Description: 'Build CodeBuild environment used to compile music collections.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
-            Type: !FindInMap [ CodeRepositoryMap , Location , !Ref CodeRepositoryLocation ]
-            Location: !ImportValue vibes-CodeRepositoryCloneUrlHttp
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'codebuild/env/buildspec.yaml'
          Environment:

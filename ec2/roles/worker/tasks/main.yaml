@@ -88,7 +88,7 @@
      state: present
      src: overlay
      fstype: overlay
-     opts: 'lowerdir={{ sources_mount_point }}:{{ code_dir }}/tup:{{ profiles_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
+     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
      path: '{{ work_dir }}'
 - name: Upload tup settings
   copy:
