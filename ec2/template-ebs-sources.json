@@ -24,6 +24,7 @@
 			"associate_public_ip_address": false,
 			"ebs_volumes": [
 				{
+					"delete_on_termination": false,
 					"device_name": "{{ user `device_name` }}",
 					"volume_size": "{{ user `size` }}",
 					"tags": {
