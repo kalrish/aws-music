@@ -1,34 +1,65 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
-   Vpc:
-      Description: 'ID of the VPC in which to place the resources.'
-      Type: 'AWS::EC2::VPC::Id'
+   BuildSecurityGroup:
+      Description: 'ID of a security group for build instances, which require Internet access.'
+      Type: 'AWS::EC2::SecurityGroup::Id'
    BuildSubnet:
       Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
-      Type: 'AWS::EC2::Subnet::Id'
-   WorkerSubnet:
-      Description: 'ID of a subnet within the VPC in which to place worker instances.'
-      Type: 'AWS::EC2::Subnet::Id'
-   ServerSubnet:
-      Description: 'ID of a subnet within the VPC in which to place server instances.'
       Type: 'AWS::EC2::Subnet::Id'
    CodeBuildSecurityGroup:
       Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
       Type: 'AWS::EC2::SecurityGroup::Id'
-   BuildSecurityGroup:
-      Description: 'ID of a security group for build instances, which require Internet access.'
-      Type: 'AWS::EC2::SecurityGroup::Id'
-   WorkerSecurityGroups:
-      Description: 'ID of a security group for worker instances.'
-      Type: 'List<AWS::EC2::SecurityGroup::Id>'
-   ServerSecurityGroups:
-      Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
-      Type: 'List<AWS::EC2::SecurityGroup::Id>'
    CodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository.'
       Type: String
       Default: 'https://github.com/kalrish/aws-vibes.git'
+   ServerSecurityGroups:
+      Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+   ServerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place server instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+   Vpc:
+      Description: 'ID of the VPC in which to place the resources.'
+      Type: 'AWS::EC2::VPC::Id'
+   WorkerSecurityGroups:
+      Description: 'ID of a security group for worker instances.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+   WorkerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place worker instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+Metadata:
+   AWS::CloudFormation::Interface:
+      ParameterGroups:
+         -
+            Label:
+               default: Sources origin
+            Parameters:
+               - CodeRepositoryCloneUrlHttp
+         -
+            Label:
+               default: VPC configuration
+            Parameters:
+               - Vpc
+               - BuildSubnet
+               - WorkerSubnet
+               - ServerSubnet
+               - CodeBuildSecurityGroup
+               - BuildSecurityGroup
+               - WorkerSecurityGroups
+               - ServerSecurityGroups
+      ParameterLabels:
+         BuildSubnet:
+            default: Build subnet
+         CodeRepositoryCloneUrlHttp:
+            default: aws-vibes git HTTP origin
+         ServerSubnet:
+            default: Server subnet
+         Vpc:
+            default: VPC
+         WorkerSubnet:
+            default: Worker subnet
 Resources:
    BuildContainerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
@@ -353,6 +384,42 @@ Resources:
                         Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
+#                     -
+#                        Action:
+#                           - "ec2:AttachVolume"
+#                           - "ec2:AuthorizeSecurityGroupIngress"
+#                           - "ec2:CopyImage"
+#                           - "ec2:CreateImage"
+#                           - "ec2:CreateKeypair"
+#                           - "ec2:CreateSecurityGroup"
+#                           - "ec2:CreateSnapshot"
+#                           - "ec2:CreateTags"
+#                           - "ec2:CreateVolume"
+#                           - "ec2:DeleteKeyPair"
+#                           - "ec2:DeleteSecurityGroup"
+#                           - "ec2:DeleteSnapshot"
+#                           - "ec2:DeleteVolume"
+#                           - "ec2:DeregisterImage"
+#                           - "ec2:DescribeImageAttribute"
+#                           - "ec2:DescribeImages"
+#                           - "ec2:DescribeInstances"
+#                           - "ec2:DescribeRegions"
+#                           - "ec2:DescribeSecurityGroups"
+#                           - "ec2:DescribeSnapshots"
+#                           - "ec2:DescribeSubnets"
+#                           - "ec2:DescribeTags"
+#                           - "ec2:DescribeVolumes"
+#                           - "ec2:DetachVolume"
+#                           - "ec2:GetPasswordData"
+#                           - "ec2:ModifyImageAttribute"
+#                           - "ec2:ModifyInstanceAttribute"
+#                           - "ec2:ModifySnapshotAttribute"
+#                           - "ec2:RegisterImage"
+#                           - "ec2:RunInstances"
+#                           - "ec2:StopInstances"
+#                           - "ec2:TerminateInstances"
+#                        Resource: '*'
+#                        Effect: Allow
             -
                PolicyName: snapshot
                PolicyDocument:
