@@ -105,20 +105,17 @@ Resources:
                   Statement:
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'vibes-ebs-sources'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ebs-sources'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -565,20 +562,17 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'vibes-ami-volmgr'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-volmgr'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -736,20 +730,17 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'vibes-ami-worker'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-worker'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -923,20 +914,17 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'vibes-ami-server'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-server'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -1053,25 +1041,6 @@ Resources:
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
-   EcrPolicy:
-      Type: 'AWS::IAM::Policy'
-      Properties:
-         PolicyName: codebuild-environment
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'ecr:GetDownloadUrlForLayer'
-                     - 'ecr:BatchGetImage'
-                     - 'ecr:BatchCheckLayerAvailability'
-                  Resource: '*'
-                  Effect: Allow
-         Roles:
-#            - !Ref BuildsVolumeBuildRole
-            - !Ref SourcesVolumeBuildRole
-            - !Ref WorkerAmiBuildRole
-            - !Ref ServerAmiBuildRole
    CodeBuildVpcPolicy:
       Type: 'AWS::IAM::Policy'
       Properties:
