@@ -11,7 +11,7 @@ Parameters:
       Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
       Type: 'AWS::EC2::SecurityGroup::Id'
    CodeRepositoryCloneUrlHttp:
-      Description: 'HTTP clone URL of the GitHub repository.'
+      Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
       Type: String
       Default: 'https://github.com/kalrish/aws-vibes.git'
    ServerSecurityGroups:
@@ -34,7 +34,7 @@ Metadata:
       ParameterGroups:
          -
             Label:
-               default: Sources origin
+               default: Sources
             Parameters:
                - CodeRepositoryCloneUrlHttp
          -
@@ -53,7 +53,7 @@ Metadata:
          BuildSubnet:
             default: Build subnet
          CodeRepositoryCloneUrlHttp:
-            default: aws-vibes git HTTP origin
+            default: aws-vibes repository
          ServerSubnet:
             default: Server subnet
          Vpc:
@@ -341,20 +341,17 @@ Resources:
                   Statement:
                      -
                         Action: 'ec2:RunInstances'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
-                        Condition:
-                           StringEquals:
-                              aws:RequestTag/Packer: 'vibes-ebs-builds'
-                        Effect: Allow
-                     -
-                        Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ebs-builds'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -382,6 +379,10 @@ Resources:
                         Effect: Allow
                      -
                         Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:*'
                         Resource: '*'
                         Effect: Allow
 #                     -
@@ -1067,7 +1068,7 @@ Resources:
                   Resource: '*'
                   Effect: Allow
          Roles:
-            - !Ref BuildsVolumeBuildRole
+#            - !Ref BuildsVolumeBuildRole
             - !Ref SourcesVolumeBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
