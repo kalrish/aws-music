@@ -52,6 +52,8 @@ Metadata:
       ParameterLabels:
          BuildSubnet:
             default: Build subnet
+         CodeBuildSecurityGroup:
+            default: CodeBuild security group
          CodeRepositoryCloneUrlHttp:
             default: aws-vibes repository
          ServerSubnet:
@@ -103,6 +105,10 @@ Resources:
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
