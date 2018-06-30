@@ -8,7 +8,7 @@ Parameters:
       Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
       Type: 'AWS::EC2::Subnet::Id'
    CodeBuildSecurityGroup:
-      Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
+      Description: 'ID of a security group to assign to CodeBuild projects, which require Internet access.'
       Type: 'AWS::EC2::SecurityGroup::Id'
    CodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
@@ -52,6 +52,8 @@ Metadata:
       ParameterLabels:
          BuildSubnet:
             default: Build subnet
+         CodeBuildSecurityGroup:
+            default: CodeBuild security group
          CodeRepositoryCloneUrlHttp:
             default: aws-vibes repository
          ServerSubnet:
@@ -103,6 +105,10 @@ Resources:
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
                         Resource:
@@ -336,6 +342,10 @@ Resources:
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
                      -
                         Action: 'ec2:RunInstances'
                         Resource:
