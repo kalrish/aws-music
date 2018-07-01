@@ -8,19 +8,11 @@
      name: '{{ item }}'
      state: present
   with_items:
+     - aws-cli
      - e2fsprogs
      - f2fs-tools
      - openssh
      - python
      - tup
      - xfsprogs
-- name: Download pip installation script
-  get_url:
-     url: 'https://bootstrap.pypa.io/get-pip.py'
-     dest: /tmp/get-pip.py
-- name: Install pip
-  command: python /tmp/get-pip.py
-- name: Install AWS CLI
-  pip:
-     name: awscli
-     state: present
+- import_tasks: vibes-user.yaml

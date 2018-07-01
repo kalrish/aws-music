@@ -1,11 +1,11 @@
 ---
-- name: Create working group
+- name: Create vibes group
   group:
      name: vibes
      state: present
      gid: '{{ vibes_gid }}'
      system: yes
-- name: Create working user
+- name: Create vibes user
   user:
      name: vibes
      state: present

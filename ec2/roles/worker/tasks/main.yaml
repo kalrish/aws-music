@@ -1,5 +1,5 @@
 ---
-- import_tasks: music-user.yaml
+- import_tasks: vibes-user.yaml
 - name: Update system software
   pacman:
      update_cache: yes
@@ -9,6 +9,7 @@
      name: '{{ item }}'
      state: present
   with_items:
+     - aws-cli
      - e2fsprogs
      - f2fs-tools
      - flac
@@ -20,16 +21,6 @@
      - tup
      - vorbis-tools
      - xfsprogs
-- name: Download pip installation script
-  get_url:
-     url: 'https://bootstrap.pypa.io/get-pip.py'
-     dest: /tmp/get-pip.py
-- name: Install pip
-  command: python /tmp/get-pip.py
-- name: Install AWS CLI
-  pip:
-     name: awscli
-     state: present
 - name: Set up git for CodeCommit access
   git_config:
      scope: system
