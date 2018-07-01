@@ -20,7 +20,7 @@ phases:
          - VOLUME_SIZE="$(( ${SOURCES_SIZE} + 2 ))"
          - |
             echo "Instance AMI: ${INSTANCE_AMI}"
-         - INSTANCE_ID="$(aws --query 'Instances[0].InstanceId' --output text ec2 run-instances --iam-instance-profile "Name=${INSTANCE_PROFILE}" --image-id "${INSTANCE_AMI}" --instance-type "${INSTANCE_TYPE}" --key-name vibes-build --subnet-id "${INSTANCE_SUBNET}" --security-group-ids ${INSTANCE_SECURITY_GROUPS} --block-device-mappings "$(jq -c ".[0].DeviceName=\"${VOLUME_NAME}\" | .[0].Ebs.VolumeSize=${VOLUME_SIZE}" -- bdm.json)" --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Packer,Value=vibes-ebs-sources}]')"
+         - INSTANCE_ID="$(aws --query 'Instances[0].InstanceId' --output text ec2 run-instances --iam-instance-profile "Name=${INSTANCE_PROFILE}" --image-id "${INSTANCE_AMI}" --instance-type "${INSTANCE_TYPE}" --key-name vibes-build --subnet-id "${INSTANCE_SUBNET}" --security-group-ids ${INSTANCE_SECURITY_GROUPS} --block-device-mappings "$(jq -c ".[0].DeviceName=\"${VOLUME_NAME}\" | .[0].Ebs.VolumeSize=${VOLUME_SIZE}" -- block-device-mappings.json)" --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Packer,Value=vibes-ebs-sources}]')"
          - |
             echo "Instance ID: ${INSTANCE_ID}"
    build:
