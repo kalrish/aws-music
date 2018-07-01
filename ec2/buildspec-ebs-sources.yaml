@@ -34,7 +34,7 @@ phases:
          - |
             until nc -z -w3 "${INSTANCE_IP}" 22 ; do : ; done
 #         - ssh -v -o StrictHostKeyChecking=no -i key.pem "root@${INSTANCE_IP}" "bash -s -ex -- ${SOURCES_BUCKET} ${VOLUME_NAME}" < ebs-prepare-sources.sh
-         - ansible-playbook -vvvv -i inventory.ini --private-key key.pem -u root -e "ansible_user=root" -e "ansible_ssh_private_key_file=key.pem" -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
+         - ansible-playbook -vvvv -i inventory.ini --private-key key.pem -u root -e 'ansible_user=root' -e 'ansible_ssh_private_key_file=key.pem' -e 'host_key_checking=False' -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
          - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
          - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
          - aws ec2 wait instance-stopped --instance-ids "${INSTANCE_ID}"
