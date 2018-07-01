@@ -1,0 +1,5 @@
+---
+- name: Provision sources EBS volume
+  hosts: all
+  roles:
+     - sources

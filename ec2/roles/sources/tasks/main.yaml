@@ -8,12 +8,12 @@
      mode: 0000
 - name: Format volume
   filesystem:
-     dev: /dev/xvdf
+     dev: '{{ device_name }}'
      fstype: ext4
      opts: -v -t ext4 -I 128 -b 4096 -m 0 -E lazy_itable_init=0,lazy_journal_init=0
 - name: Mount volume
   mount:
-     src: /dev/xvdf
+     src: '{{ device_name }}'
      path: '{{ mount_point }}'
      state: mounted
      fstype: ext4
