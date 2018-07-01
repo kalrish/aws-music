@@ -20,7 +20,7 @@
 - name: Download music sources
   command: 'aws s3 cp --recursive s3://{{ sources_bucket }} {{ mount_point }}'
   become: yes
-  become_user: '{{ vibes_uid }}'
+  become_user: vibes
 - name: Unmount volume
   mount:
      path: '{{ mount_point }}'
