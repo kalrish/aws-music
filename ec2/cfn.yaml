@@ -98,7 +98,9 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Resource:
+                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
                         Effect: Allow
             -
                PolicyName: packer

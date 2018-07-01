@@ -7,6 +7,7 @@ env:
       VOLUME_NAME: /dev/xvdf
    parameter-store:
       INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
+      PRIVATE_KEY: '/vibes/ec2/keys/build'
 
 phases:
    pre_build:
@@ -24,6 +25,8 @@ phases:
             echo "Instance ID: ${INSTANCE_ID}"
    build:
       commands:
+         - echo "${PRIVATE_KEY}" > key.pem
+         - chmod 0600 key.pem
          - aws ec2 wait instance-running --instance-ids "${INSTANCE_ID}"
          - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"
          - INSTANCE_IP="$(aws --output text --query 'Reservations[0].Instances[0].PrivateIpAddress' ec2 describe-instances --instance-id "${INSTANCE_ID}")"
