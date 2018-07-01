@@ -37,15 +37,15 @@ Metadata:
                - NatInstanceType
       ParameterLabels:
          NatInstanceImageId:
-            default: NAT instance AMI
+            default: AMI
          NatInstanceKeyName:
-            default: NAT instance keypair name
+            default: Keypair name
          NatInstanceType:
-            default: NAT instance type
+            default: Instance type
          PrivateSubnetAvailabilityZone:
             default: Private subnet availability zone
          VpcIpv4AddressBlock:
-            default: VPC IPv4 address block
+            default: IPv4 address block
 Resources:
    Vpc:
       Type: 'AWS::EC2::VPC'
