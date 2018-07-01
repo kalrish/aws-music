@@ -28,7 +28,7 @@ phases:
          - echo "${INSTANCE_IP}" >> inventory.ini
          - |
             until nc -z -w3 "${INSTANCE_IP}" 22 ; do : ; done
-         - ansible-playbook -v -i inventory.ini --private-key key.pem -u root -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
+         - ansible-playbook -v -i inventory.ini --private-key key.pem -u root -e "device_name=${VOLUME_NAME}" playbook-ebs-builds.yaml
          - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
          - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
          - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"

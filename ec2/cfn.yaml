@@ -493,7 +493,7 @@ Resources:
                -
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
-                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
+                  Value: !Sub '${BuildSecurityGroup} ${BuildInstanceSecurityGroup.GroupId}'
                -
                   Name: WORKER_LAUNCH_TEMPLATE
                   Type: PLAINTEXT
