@@ -1,0 +1,7 @@
+[
+	{
+		"Ebs": {
+			"DeleteOnTermination": "true"
+		}
+	}
+]
