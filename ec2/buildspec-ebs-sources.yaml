@@ -3,7 +3,7 @@ version: 0.2
 
 env:
    variables:
-      INSTANCE_TYPE: 'm5.xlarge'
+      INSTANCE_TYPE: 'm5.large'
       VOLUME_NAME: '/dev/xvdf'
    parameter-store:
       INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
