@@ -10,13 +10,20 @@
   filesystem:
      dev: '{{ device_name }}'
      fstype: ext4
-     opts: -v -t ext4 -I 128 -b 4096 -m 0 -E lazy_itable_init=0,lazy_journal_init=0
+     opts: '-v -t ext4 -I 128 -b 4096 -m 0 -E lazy_itable_init=0,lazy_journal_init=0,root_owner={{ vibes_uid }}:{{ vibes_gid }}'
 - name: Mount volume
   mount:
      src: '{{ device_name }}'
      path: '{{ mount_point }}'
      state: mounted
      fstype: ext4
+- name: Set volume owner
+  file:
+     dest: '{{ mount_point }}'
+     recurse: yes
+     owner: vibes
+     group: vibes
+     mode: u=rwx,g=rx,o=rx
 - name: Download music sources
   command: 'aws s3 cp --recursive s3://{{ sources_bucket }} {{ mount_point }}'
   become: yes

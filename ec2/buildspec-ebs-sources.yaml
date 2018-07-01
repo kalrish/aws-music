@@ -3,7 +3,6 @@ version: 0.2
 
 env:
    variables:
-      ANSIBLE_HOST_KEY_CHECKING: 'False'
       INSTANCE_TYPE: 't2.micro'
       VOLUME_NAME: '/dev/xvdf'
    parameter-store:
