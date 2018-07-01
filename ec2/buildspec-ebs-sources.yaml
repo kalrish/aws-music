@@ -20,7 +20,7 @@ phases:
          - VOLUME_SIZE="$(( ${SOURCES_SIZE} + 2 ))"
          - |
             echo "Instance AMI: ${INSTANCE_AMI}"
-         - INSTANCE_ID="$(aws --query 'Instances[0].InstanceId' --output text ec2 run-instances --iam-instance-profile "Name=${INSTANCE_PROFILE}" --image-id "${INSTANCE_AMI}" --instance-type "${INSTANCE_TYPE}" --key-name vibes-packer --subnet-id "${INSTANCE_SUBNET}" --security-group-ids ${INSTANCE_SECURITY_GROUPS} --block-device-mappings "$(jq -c ".[0].DeviceName=\"${VOLUME_NAME}\" | .[0].Ebs.VolumeSize=${VOLUME_SIZE}" -- bdm.json)" --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Packer,Value=vibes-ebs-sources}]')"
+         - INSTANCE_ID="$(aws --query 'Instances[0].InstanceId' --output text ec2 run-instances --iam-instance-profile "Name=${INSTANCE_PROFILE}" --image-id "${INSTANCE_AMI}" --instance-type "${INSTANCE_TYPE}" --key-name vibes-build --subnet-id "${INSTANCE_SUBNET}" --security-group-ids ${INSTANCE_SECURITY_GROUPS} --block-device-mappings "$(jq -c ".[0].DeviceName=\"${VOLUME_NAME}\" | .[0].Ebs.VolumeSize=${VOLUME_SIZE}" -- bdm.json)" --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Packer,Value=vibes-ebs-sources}]')"
          - |
             echo "Instance ID: ${INSTANCE_ID}"
    build:
@@ -28,7 +28,6 @@ phases:
          - echo "${PRIVATE_KEY}" > key.pem
          - chmod 0600 key.pem
          - aws ec2 wait instance-running --instance-ids "${INSTANCE_ID}"
-         - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"
          - INSTANCE_IP="$(aws --output text --query 'Reservations[0].Instances[0].PrivateIpAddress' ec2 describe-instances --instance-id "${INSTANCE_ID}")"
          - echo "${INSTANCE_IP}" >> inventory.ini
          - |
@@ -37,6 +36,7 @@ phases:
          - ansible-playbook -v -i inventory.ini --private-key key.pem -u root -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
          - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
          - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
+         - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"
          - aws ec2 wait instance-stopped --instance-ids "${INSTANCE_ID}"
          - SNAPSHOT_ID="$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id "${VOLUME_ID}" --tag-specifications 'ResourceType=snapshot,Tags=[{Key=vibes,Value=sources}]')"
          - WORKER_LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${WORKER_LAUNCH_TEMPLATE}")"

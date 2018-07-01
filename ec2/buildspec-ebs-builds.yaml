@@ -2,25 +2,42 @@
 version: 0.2
 
 env:
+   variables:
+      INSTANCE_TYPE: 't2.micro'
+      VOLUME_NAME: '/dev/xvdf'
    parameter-store:
       INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
+      PRIVATE_KEY: '/vibes/ec2/keys/build'
 
 phases:
    pre_build:
       commands:
-         - test ${SIZE+x}
+         - test ${VOLUME_SIZE+x}
+         - cd ec2
+         - |
+            echo "Instance AMI: ${INSTANCE_AMI}"
+         - INSTANCE_ID="$(aws --query 'Instances[0].InstanceId' --output text ec2 run-instances --image-id "${INSTANCE_AMI}" --instance-type "${INSTANCE_TYPE}" --key-name vibes-build --subnet-id "${INSTANCE_SUBNET}" --security-group-ids ${INSTANCE_SECURITY_GROUPS} --block-device-mappings "$(jq -c ".[0].DeviceName=\"${VOLUME_NAME}\" | .[0].Ebs.VolumeSize=${VOLUME_SIZE}" -- bdm.json)" --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Packer,Value=vibes-ebs-builds}]')"
+         - |
+            echo "Instance ID: ${INSTANCE_ID}"
    build:
       commands:
-         - cd ec2
-         #  User variables do not seem to play well with numeric parameters
-         - bash -c 'packer build <(jq -c ".builders[0].ebs_volumes[0].volume_size=${SIZE}" -- template-ebs-builds.json)'
-         - cat -- manifest.json
+         - echo "${PRIVATE_KEY}" > key.pem
+         - chmod 0600 key.pem
+         - aws ec2 wait instance-running --instance-ids "${INSTANCE_ID}"
+         - INSTANCE_IP="$(aws --output text --query 'Reservations[0].Instances[0].PrivateIpAddress' ec2 describe-instances --instance-id "${INSTANCE_ID}")"
+         - echo "${INSTANCE_IP}" >> inventory.ini
          - |
-            VOLUME_ID="$(jq -r '.builds[0].artifact_id' -- manifest.json | cut -d : -f 2)"
+            until nc -z -w3 "${INSTANCE_IP}" 22 ; do : ; done
+         - ansible-playbook -v -i inventory.ini --private-key key.pem -u root -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
+         - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
+         - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
+         - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"
+         - aws ec2 wait instance-stopped --instance-ids "${INSTANCE_ID}"
          - SNAPSHOT_ID="$(aws --query 'SnapshotId' --output text ec2 create-snapshot --volume-id "${VOLUME_ID}" --tag-specifications 'ResourceType=snapshot,Tags=[{Key=vibes,Value=builds}]')"
          - WORKER_LAUNCH_TEMPLATE_LAST="$(aws --query 'LaunchTemplates[0].LatestVersionNumber' --output text ec2 describe-launch-templates --launch-template-ids "${WORKER_LAUNCH_TEMPLATE}")"
          - WORKER_LAUNCH_TEMPLATE_NEW="$(aws --query 'LaunchTemplateVersion.VersionNumber' --output text ec2 create-launch-template-version --launch-template-id "${WORKER_LAUNCH_TEMPLATE}" --launch-template-data "$(aws --query 'LaunchTemplateVersions[0].LaunchTemplateData' --output json ec2 describe-launch-template-versions --launch-template-id ${WORKER_LAUNCH_TEMPLATE} --versions ${WORKER_LAUNCH_TEMPLATE_LAST} | jq -c ".BlockDeviceMappings[1].Ebs.SnapshotId=\"${SNAPSHOT_ID}\"")")"
          - |
             echo "Updated worker launch template version: $(aws --query 'LaunchTemplate.DefaultVersionNumber' --output text ec2 modify-launch-template --launch-template-id "${WORKER_LAUNCH_TEMPLATE}" --default-version "${WORKER_LAUNCH_TEMPLATE_NEW}")"
-      finally:
-         - aws ec2 delete-volume --volume-id "${VOLUME_ID}"
+   post_build:
+      commands:
+         - if test -n ${INSTANCE_ID} ; then INSTANCE_STATE="$(aws --query 'TerminatingInstances[0].CurrentState.Name' --output text ec2 terminate-instances --instance-ids "${INSTANCE_ID}")" ; test "${INSTANCE_STATE}" = 'shutting-down' -o "${INSTANCE_STATE}" = 'terminated' ; fi

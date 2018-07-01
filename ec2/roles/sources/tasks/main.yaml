@@ -17,7 +17,7 @@
      path: '{{ mount_point }}'
      state: mounted
      fstype: ext4
-- name: Set volume owner
+- name: Set volume ownership
   file:
      dest: '{{ mount_point }}'
      recurse: yes
