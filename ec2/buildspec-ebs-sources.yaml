@@ -29,7 +29,7 @@ phases:
          - INSTANCE_IP="$(aws --output text --query 'Reservations[0].Instances[0].PrivateIpAddress' ec2 describe-instances --instance-id "${INSTANCE_ID}")"
          - |
             until nc -z -w3 "${INSTANCE_IP}" 22 ; do : ; done
-         - ssh -i vibes-packer.pem "root@${INSTANCE_IP}" "bash -s -ex -- ${SOURCES_BUCKET} ${VOLUME_NAME}" < ebs-prepare-sources.sh
+         - ssh -v -o StrictHostKeyChecking=no -i vibes-packer.pem "root@${INSTANCE_IP}" "bash -s -ex -- ${SOURCES_BUCKET} ${VOLUME_NAME}" < ebs-prepare-sources.sh
          - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
          - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
          - aws ec2 wait instance-stopped --instance-ids "${INSTANCE_ID}"
