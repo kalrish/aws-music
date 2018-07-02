@@ -7,5 +7,6 @@ ExecStart=/usr/bin/bash -ex -- {{ profiles_update_script }}
 User=vibes
 Group=vibes
 WorkingDirectory={{ profiles_dir }}
+Environment=AWS_DEFAULT_REGION={{ region }}
 StandardOutput=journal+console
 StandardError=journal+console

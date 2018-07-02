@@ -14,7 +14,6 @@
      - f2fs-tools
      - flac
      - git
-     - jq
      - lame
      - openssh
      - opus-tools
@@ -22,6 +21,10 @@
      - tup
      - vorbis-tools
      - xfsprogs
+#- name: Specify default AWS region
+#  lineinfile:
+#     path: /etc/environment
+#     line: 'AWS_DEFAULT_REGION={{ region }}'
 #- name: Set up git for CodeCommit access
 #  git_config:
 #     scope: system
@@ -39,12 +42,18 @@
      repo: '{{ code_repo }}'
      dest: '{{ code_dir }}'
      clone: yes
+     version: master
   become: yes
   become_user: vibes
 - name: Enable full dependency tracking for tup
   file:
      path: /usr/bin/tup
      mode: +s
+- name: Enable FUSE for tup
+  lineinfile:
+     path: /etc/fuse.conf
+     line: user_allow_other
+     state: present
 - name: Upload systemd service units
   template:
      src: 'vibes-{{ item }}.service.j2'

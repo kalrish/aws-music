@@ -21,7 +21,11 @@
 			"groups": [
 				"common"
 			],
-			"user": "{{ user `ssh_user` }}"
+			"user": "{{ user `ssh_user` }}",
+			"extra_arguments": [
+				"--extra-vars",
+				"region={{ user `region` }}"
+			]
 		}
 	],
 	"builders": [

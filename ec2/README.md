@@ -9,7 +9,17 @@ Deployment
 
   1.  Deploy a new CloudFormation stack based on the `ec2/cfn.yaml` template.
  
-  2.  Create the necessary EC2 keypairs.
+  2.  Create the necessary EC2 key pairs.
+  
+      Firstly, create the key pair used for the build instances. The private key must be made available in the parameter store for the build projects to retrieve it.
+	  
+	      $  aws --query 'KeyMaterial' --output text ec2 create-key-pair --key-name vibes-builds > ~/.ssh/vibes-builds.pem
+		  $  chmod 0600 ~/.ssh/vibes-builds.pem
+	      $  aws ssm put-parameter --name /vibes/ec2/keys/builds --type SecureString --value "file://${HOME}/.ssh/vibes-builds.pem"
+	  
+      Then, create the key pairs for the actual instances.
+	  
+	      $  for NAME in worker server ; do aws --query 'KeyMaterial' --output text ec2 create-key-pair --key-name vibes-${NAME} > ~/.ssh/vibes-${NAME}.pem && chmod 0600 ~/.ssh/vibes-${NAME}.pem ; done
  
   3.  Build the AMIs.
  
