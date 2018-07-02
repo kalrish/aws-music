@@ -98,19 +98,22 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource:
-                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
-                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
                         Effect: Allow
             -
-               PolicyName: packer
+               PolicyName: cloudwatch
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action: 'ec2:DescribeImages'
+                        Action: 'cloudwatch:GetMetricStatistics'
                         Resource: '*'
                         Effect: Allow
+            -
+               PolicyName: ec2
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
                      -
                         Action: 'ec2:RunInstances'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
@@ -160,20 +163,6 @@ Resources:
                         Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
-            -
-               PolicyName: cloudwatch
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action: 'cloudwatch:GetMetricStatistics'
-                        Resource: '*'
-                        Effect: Allow
-            -
-               PolicyName: snapshot
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
                      -
                         Action: 'ec2:CreateSnapshot'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
@@ -196,14 +185,6 @@ Resources:
                            StringEquals:
                               ec2:CreateAction: 'CreateSnapshot'
                               aws:RequestTag/vibes: sources
-                        Effect: Allow
-                     -
-                        Action: 'ec2:DeleteVolume'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                        Condition:
-                           StringEquals:
-                              ec2:Region: !Ref 'AWS::Region'
-                              ec2:ResourceTag/vibes: sources
                         Effect: Allow
             -
                PolicyName: launch-template
@@ -340,12 +321,10 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource:
-                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
-                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
                         Effect: Allow
             -
-               PolicyName: packer
+               PolicyName: ec2
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -394,11 +373,6 @@ Resources:
                         Action: 'ec2:DescribeVolumes'
                         Resource: '*'
                         Effect: Allow
-            -
-               PolicyName: snapshot
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
                      -
                         Action: 'ec2:CreateSnapshot'
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
@@ -421,14 +395,6 @@ Resources:
                            StringEquals:
                               ec2:CreateAction: 'CreateSnapshot'
                               aws:RequestTag/vibes: builds
-                        Effect: Allow
-                     -
-                        Action: 'ec2:DeleteVolume'
-                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
-                        Condition:
-                           StringEquals:
-                              ec2:Region: !Ref 'AWS::Region'
-                              ec2:ResourceTag/vibes: builds
                         Effect: Allow
             -
                PolicyName: launch-template
@@ -609,36 +575,6 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref VolmgrAmiBuildRole
-   VolmgrInstanceRole:
-      Type: 'AWS::IAM::Role'
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: 'ec2.amazonaws.com'
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: sources
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action: 's3:ListBucket'
-                        Resource: !ImportValue vibes-SourcesBucketArn
-                        Effect: Allow
-                     -
-                        Action: 's3:GetObject'
-                        Resource: !Join [ '/', [ !ImportValue vibes-SourcesBucketArn, '*' ] ]
-                        Effect: Allow
-   VolmgrInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
-      Properties:
-         Roles:
-            - !Ref VolmgrInstanceRole
    VolmgrAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
@@ -672,10 +608,6 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: SOURCES_BUCKET
-                  Type: PLAINTEXT
-                  Value: !ImportValue vibes-SourcesBucket
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
@@ -698,15 +630,6 @@ Resources:
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
-            -
-               PolicyName: parameters
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
-                        Effect: Allow
             -
                PolicyName: packer
                PolicyDocument:
@@ -814,7 +737,7 @@ Resources:
                   Effect: Allow
          Policies:
             -
-               PolicyName: parameters
+               PolicyName: profiles
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
@@ -1022,10 +945,6 @@ Resources:
                   Type: PLAINTEXT
                   Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
                -
-                  Name: CODE_REPOSITORY
-                  Type: PLAINTEXT
-                  Value: !Ref CodeRepositoryCloneUrlHttp
-               -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
                   Value: !Ref ServerLaunchTemplate
@@ -1064,6 +983,23 @@ Resources:
                      StringEquals:
                         ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
                         ec2:AuthorizedService: 'codebuild.amazonaws.com'
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+            - !Ref SourcesVolumeBuildRole
+            - !Ref VolmgrAmiBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+   BuildKeyPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codebuild-key
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action: 'ssm:GetParameters'
+                  Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
                   Effect: Allow
          Roles:
             - !Ref BuildsVolumeBuildRole
