@@ -70,18 +70,18 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-- name: Set up sources volume mounting
-  mount:
-     state: present
-     src: /dev/xvdf
-     fstype: ext4
-     path: '{{ sources_mount_point }}'
-- name: Set up builds volume mounting
-  mount:
-     state: present
-     src: /dev/xvdg
-     fstype: ext4
-     path: '{{ builds_mount_point }}'
+#- name: Set up sources volume mounting
+#  mount:
+#     state: present
+#     src: /dev/xvdf
+#     fstype: ext4
+#     path: '{{ sources_mount_point }}'
+#- name: Set up builds volume mounting
+#  mount:
+#     state: present
+#     src: /dev/xvdg
+#     fstype: ext4
+#     path: '{{ builds_mount_point }}'
 - name: Create profiles directory
   file:
      path: '{{ profiles_dir }}'
@@ -96,13 +96,13 @@
      owner: vibes
      group: vibes
      mode: u=rwx,g=rwx,o=rx
-- name: Set up work directory
-  mount:
-     state: present
-     src: overlay
-     fstype: overlay
-     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
-     path: '{{ work_dir }}'
+#- name: Set up work directory
+#  mount:
+#     state: present
+#     src: overlay
+#     fstype: overlay
+#     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
+#     path: '{{ work_dir }}'
 - name: Upload tup settings
   copy:
      src: tup.ini
