@@ -1081,10 +1081,12 @@ Resources:
                   DeviceName: /dev/xvdf
                   Ebs:
                      DeleteOnTermination: true
+                     VolumeSize: 0
                -
                   DeviceName: /dev/xvdg
                   Ebs:
                      DeleteOnTermination: true
+                     VolumeSize: 0
             NetworkInterfaces:
                -
                   DeviceIndex: 0
