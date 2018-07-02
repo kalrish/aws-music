@@ -1,6 +1,7 @@
 ---
 builds_mount_point: /mnt/vibes/builds
 code_dir: '{{ vibes_home }}/code'
+code_repo: 'https://github.com/kalrish/tup-vibes.git'
 profiles_dir: '{{ vibes_home }}/profiles'
 profiles_update_script: /usr/local/bin/vibes-update_profiles
 sources_mount_point: /mnt/vibes/sources

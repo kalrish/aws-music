@@ -54,8 +54,8 @@
 				"most_recent": true
 			},
 			"ssh_interface": "private_ip",
-			"ssh_keypair_name": "vibes-packer",
-			"ssh_private_key_file": "vibes-packer.pem",
+			"ssh_keypair_name": "vibes-build",
+			"ssh_private_key_file": "vibes-build.pem",
 			"ssh_username": "{{ user `ssh_user` }}",
 			"subnet_id": "{{ user `subnet_id` }}",
 			"vpc_id": "{{ user `vpc_id` }}"

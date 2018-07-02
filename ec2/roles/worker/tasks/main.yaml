@@ -21,18 +21,18 @@
      - tup
      - vorbis-tools
      - xfsprogs
-- name: Set up git for CodeCommit access
-  git_config:
-     scope: system
-     name: '{{ item.name }}'
-     value: '{{ item.value }}'
-  loop:
-     -
-        name: credential.helper
-        value: '!aws codecommit credential-helper $@'
-     -
-        name: credential.UseHttpPath
-        value: true
+#- name: Set up git for CodeCommit access
+#  git_config:
+#     scope: system
+#     name: '{{ item.name }}'
+#     value: '{{ item.value }}'
+#  loop:
+#     -
+#        name: credential.helper
+#        value: '!aws codecommit credential-helper $@'
+#     -
+#        name: credential.UseHttpPath
+#        value: true
 - name: Download build code
   git:
      repo: '{{ code_repo }}'

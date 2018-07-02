@@ -25,15 +25,15 @@ phases:
             echo "Instance ID: ${INSTANCE_ID}"
    build:
       commands:
-         - echo "${PRIVATE_KEY}" > key.pem
-         - chmod 0600 key.pem
+         - echo "${PRIVATE_KEY}" > vibes-build.pem
+         - chmod 0600 vibes-build.pem
          - aws ec2 wait instance-running --instance-ids "${INSTANCE_ID}"
          - INSTANCE_IP="$(aws --output text --query 'Reservations[0].Instances[0].PrivateIpAddress' ec2 describe-instances --instance-id "${INSTANCE_ID}")"
          - echo "${INSTANCE_IP}" >> inventory.ini
          - |
             until nc -z -w3 "${INSTANCE_IP}" 22 ; do : ; done
-#         - ssh -v -o StrictHostKeyChecking=no -i key.pem "root@${INSTANCE_IP}" "bash -s -ex -- ${SOURCES_BUCKET} ${VOLUME_NAME}" < ebs-prepare-sources.sh
-         - ansible-playbook -v -i inventory.ini --private-key key.pem -u root -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
+#         - ssh -v -o StrictHostKeyChecking=no -i vibes-build.pem "root@${INSTANCE_IP}" "bash -s -ex -- ${SOURCES_BUCKET} ${VOLUME_NAME}" < ebs-prepare-sources.sh
+         - ansible-playbook -v -i inventory.ini --private-key vibes-build.pem -u root -e "sources_bucket=${SOURCES_BUCKET}" -e "device_name=${VOLUME_NAME}" playbook-ebs-sources.yaml
          - INSTANCE_STATE="$(aws --query 'StoppingInstances[0].CurrentState.Name' --output text ec2 stop-instances --instance-ids "${INSTANCE_ID}")"
          - test "${INSTANCE_STATE}" = 'stopping' -o "${INSTANCE_STATE}" = 'stopped'
          - VOLUME_ID="$(aws --query 'Volumes[0].VolumeId' --output text ec2 describe-volumes --filters "Name=attachment.instance-id,Values=${INSTANCE_ID}" "Name=attachment.device,Values=${VOLUME_NAME}")"
