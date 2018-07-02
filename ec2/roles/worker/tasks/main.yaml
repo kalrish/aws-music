@@ -14,6 +14,7 @@
      - f2fs-tools
      - flac
      - git
+     - jq
      - lame
      - openssh
      - opus-tools
@@ -81,6 +82,13 @@
      src: /dev/xvdg
      fstype: ext4
      path: '{{ builds_mount_point }}'
+- name: Create profiles directory
+  file:
+     path: '{{ profiles_dir }}'
+     state: directory
+     owner: vibes
+     group: vibes
+     mode: u=rwx,g=rx,o=rx
 - name: Create overlay mount point
   file:
      path: '{{ work_dir }}'

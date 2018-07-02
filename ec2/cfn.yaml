@@ -820,7 +820,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParametersByPath'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles'
                         Effect: Allow
    WorkerInstanceProfile:
       Type: 'AWS::IAM::InstanceProfile'
