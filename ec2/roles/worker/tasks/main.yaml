@@ -75,12 +75,14 @@
      state: present
      src: /dev/xvdf
      fstype: ext4
+     opts: 'nofail'
      path: '{{ sources_mount_point }}'
 - name: Set up builds volume mounting
   mount:
      state: present
      src: /dev/xvdg
      fstype: ext4
+     opts: 'nofail'
      path: '{{ builds_mount_point }}'
 - name: Create profiles directory
   file:
@@ -101,7 +103,7 @@
      state: present
      src: overlay
      fstype: overlay
-     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
+     opts: 'nofail,lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
      path: '{{ work_dir }}'
 - name: Upload tup settings
   copy:
