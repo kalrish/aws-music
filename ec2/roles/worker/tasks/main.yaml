@@ -33,77 +33,77 @@
 #     -
 #        name: credential.UseHttpPath
 #        value: true
-#- name: Download build code
-#  git:
-#     repo: '{{ code_repo }}'
-#     dest: '{{ code_dir }}'
-#     clone: yes
-#  become: yes
-#  become_user: vibes
-#- name: Enable full dependency tracking for tup
-#  file:
-#     path: /usr/bin/tup
-#     mode: +s
-#- name: Upload systemd service units
-#  template:
-#     src: 'vibes-{{ item }}.service.j2'
-#     dest: '/etc/systemd/system/vibes-{{ item }}.service'
-#     owner: root
-#     group: root
-#     mode: u=rw,g=r,o=r
-#  with_items:
-#     - build
-#     - monitor
-##- name: Enable tup monitor service
-##  systemd:
-##     name: vibes-monitor
-##     enabled: yes
-#- name: Create mount points for volumes
-#  file:
-#     path: '{{ item }}'
-#     state: directory
-#     owner: root
-#     group: root
-#     mode: 0000
-#  with_items:
-#     - '{{ sources_mount_point }}'
-#     - '{{ builds_mount_point }}'
-#- name: Set up sources volume mounting
-#  mount:
-#     state: present
-#     src: /dev/xvdf
-#     fstype: ext4
-#     path: '{{ sources_mount_point }}'
-#- name: Set up builds volume mounting
-#  mount:
-#     state: present
-#     src: /dev/xvdg
-#     fstype: ext4
-#     path: '{{ builds_mount_point }}'
-#- name: Create overlay mount point
-#  file:
-#     path: '{{ work_dir }}'
-#     state: directory
-#     owner: vibes
-#     group: vibes
-#     mode: u=rwx,g=rwx,o=rx
-#- name: Set up work directory
-#  mount:
-#     state: present
-#     src: overlay
-#     fstype: overlay
-#     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
-#     path: '{{ work_dir }}'
-#- name: Upload tup settings
-#  copy:
-#     src: tup.ini
-#     dest: '{{ vibes_home }}/.tupoptions'
-#  become: yes
-#  become_user: vibes
-#- name: Upload profile update script
-#  template:
-#     src: 'update_profiles.sh'
-#     dest: '{{ profiles_update_script }}'
-#     owner: root
-#     group: root
-#     mode: u=rw,g=r,o=r
+- name: Download build code
+  git:
+     repo: '{{ code_repo }}'
+     dest: '{{ code_dir }}'
+     clone: yes
+  become: yes
+  become_user: vibes
+- name: Enable full dependency tracking for tup
+  file:
+     path: /usr/bin/tup
+     mode: +s
+- name: Upload systemd service units
+  template:
+     src: 'vibes-{{ item }}.service.j2'
+     dest: '/etc/systemd/system/vibes-{{ item }}.service'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
+  with_items:
+     - build
+     - monitor
+#- name: Enable tup monitor service
+#  systemd:
+#     name: vibes-monitor
+#     enabled: yes
+- name: Create mount points for volumes
+  file:
+     path: '{{ item }}'
+     state: directory
+     owner: root
+     group: root
+     mode: 0000
+  with_items:
+     - '{{ sources_mount_point }}'
+     - '{{ builds_mount_point }}'
+- name: Set up sources volume mounting
+  mount:
+     state: present
+     src: /dev/xvdf
+     fstype: ext4
+     path: '{{ sources_mount_point }}'
+- name: Set up builds volume mounting
+  mount:
+     state: present
+     src: /dev/xvdg
+     fstype: ext4
+     path: '{{ builds_mount_point }}'
+- name: Create overlay mount point
+  file:
+     path: '{{ work_dir }}'
+     state: directory
+     owner: vibes
+     group: vibes
+     mode: u=rwx,g=rwx,o=rx
+- name: Set up work directory
+  mount:
+     state: present
+     src: overlay
+     fstype: overlay
+     opts: 'lowerdir={{ sources_mount_point }}:{{ profiles_dir }}:{{ code_dir }},upperdir={{ builds_mount_point }}/builds,workdir={{ builds_mount_point }}/.overlayfs'
+     path: '{{ work_dir }}'
+- name: Upload tup settings
+  copy:
+     src: tup.ini
+     dest: '{{ vibes_home }}/.tupoptions'
+  become: yes
+  become_user: vibes
+- name: Upload profile update script
+  template:
+     src: 'update_profiles.sh'
+     dest: '{{ profiles_update_script }}'
+     owner: root
+     group: root
+     mode: u=rw,g=r,o=r
