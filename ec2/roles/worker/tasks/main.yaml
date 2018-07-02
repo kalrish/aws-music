@@ -52,6 +52,7 @@
      group: root
      mode: u=rw,g=r,o=r
   with_items:
+     - update-profiles
      - build
      - monitor
 #- name: Enable tup monitor service

@@ -1,6 +1,5 @@
 {
 	"variables": {
-		"code_repository": "{{ env `CODE_REPOSITORY` }}",
 		"instance_profile": "{{ env `INSTANCE_PROFILE` }}",
 		"instance_type": "t2.micro",
 		"name": "{{ env `NAME` }}",
@@ -22,11 +21,7 @@
 			"groups": [
 				"common"
 			],
-			"user": "{{ user `ssh_user` }}",
-			"extra_arguments": [
-				"--extra-vars",
-				"code_repo={{ user `code_repository` }}"
-			]
+			"user": "{{ user `ssh_user` }}"
 		}
 	],
 	"builders": [
