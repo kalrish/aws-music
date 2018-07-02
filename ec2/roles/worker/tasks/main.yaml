@@ -75,7 +75,7 @@
      state: present
      src: /dev/xvdf
      fstype: ext4
-     opts: 'nofail'
+     opts: 'nofail,noatime'
      path: '{{ sources_mount_point }}'
 - name: Set up builds volume mounting
   mount:
