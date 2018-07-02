@@ -18,7 +18,7 @@
 		},
 		{
 			"type": "ansible",
-			"playbook_file": "playbook-{{ user `name` }}.yaml",
+			"playbook_file": "playbook-ami-{{ user `name` }}.yaml",
 			"groups": [
 				"common"
 			],
