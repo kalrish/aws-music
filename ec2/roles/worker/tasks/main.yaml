@@ -38,15 +38,16 @@
      repo: '{{ code_repo }}'
      dest: '{{ code_dir }}'
      clone: yes
-  become_user: music
+  become: yes
+  become_user: vibes
 - name: Enable full dependency tracking for tup
   file:
      path: /usr/bin/tup
      mode: +s
 - name: Upload systemd service units
   template:
-     src: 'music-{{ item }}.service.j2'
-     dest: '/etc/systemd/system/music-{{ item }}.service'
+     src: 'vibes-{{ item }}.service.j2'
+     dest: '/etc/systemd/system/vibes-{{ item }}.service'
      owner: root
      group: root
      mode: u=rw,g=r,o=r
@@ -55,7 +56,7 @@
      - monitor
 #- name: Enable tup monitor service
 #  systemd:
-#     name: music-monitor
+#     name: vibes-monitor
 #     enabled: yes
 - name: Create mount points for volumes
   file:
@@ -67,7 +68,19 @@
   with_items:
      - '{{ sources_mount_point }}'
      - '{{ builds_mount_point }}'
-- name: Create OverlayFS mount point
+- name: Set up sources volume mounting
+  mount:
+     state: present
+     src: /dev/xvdf
+     fstype: ext4
+     path: '{{ sources_mount_point }}'
+- name: Set up builds volume mounting
+  mount:
+     state: present
+     src: /dev/xvdg
+     fstype: ext4
+     path: '{{ builds_mount_point }}'
+- name: Create overlay mount point
   file:
      path: '{{ work_dir }}'
      state: directory
@@ -84,12 +97,13 @@
 - name: Upload tup settings
   copy:
      src: tup.ini
-     dest: '{{ music_home }}/.tupoptions'
-  become_user: music
+     dest: '{{ vibes_home }}/.tupoptions'
+  become: yes
+  become_user: vibes
 - name: Upload profile update script
   template:
      src: 'update_profiles.sh'
-     dest: '/usr/local/bin/music-update_profiles'
+     dest: '{{ profiles_update_script }}'
      owner: root
      group: root
      mode: u=rw,g=r,o=r

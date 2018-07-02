@@ -1,12 +1,12 @@
 [Unit]
-Description=Monitor music build dependencies for changes
+Description=Monitor vibes build dependencies
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/tup monitor
-ExecStop=/usr/bin/tup stop
-User=music
-Group=music
+ExecStart=/usr/bin/bash -c "tup monitor"
+ExecStop=/usr/bin/bash -c "tup stop"
+User=vibes
+Group=vibes
 #CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
 #AmbientCapabilities=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID
 PrivateNetwork=yes

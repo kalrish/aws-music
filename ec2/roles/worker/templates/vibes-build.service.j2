@@ -1,11 +1,11 @@
 [Unit]
-Description=Build music library
+Description=Build vibes library
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/tup
-User=music
-Group=music
+User=vibes
+Group=vibes
 PrivateNetwork=yes
 WorkingDirectory={{ work_dir }}
 StandardOutput=journal+console

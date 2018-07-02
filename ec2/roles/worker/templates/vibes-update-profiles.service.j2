@@ -1,0 +1,11 @@
+[Unit]
+Description=Update vibes profiles
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -ex -- {{ profiles_update_script }}
+User=vibes
+Group=vibes
+WorkingDirectory={{ profiles_dir }}
+StandardOutput=journal+console
+StandardError=journal+console
