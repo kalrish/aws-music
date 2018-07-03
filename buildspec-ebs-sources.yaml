@@ -12,7 +12,6 @@ env:
 phases:
    pre_build:
       commands:
-         - cd ec2
          - NOW="$(date -- +%s)"
          - SOURCES_SIZE="$(( $(aws --query 'Datapoints[0].Average' --output text cloudwatch get-metric-statistics --namespace AWS/S3 --start-time "$((${NOW}-86400))" --end-time "${NOW}" --period 86400 --statistics Average --metric-name BucketSizeBytes --dimensions "Name=BucketName,Value=${SOURCES_BUCKET}" Name=StorageType,Value=StandardStorage | cut -d . -f 1) / 1073741824 ))"
          - |

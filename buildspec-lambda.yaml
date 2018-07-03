@@ -1,0 +1,7 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - GOOS=linux go build -o lambda lambda/build.go

@@ -8,7 +8,6 @@ env:
 phases:
    build:
       commands:
-         - cd ec2
          - echo "${PRIVATE_KEY}" > vibes-build.pem
          - chmod 0600 vibes-build.pem
          - packer build template-ami.json

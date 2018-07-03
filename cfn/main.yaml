@@ -1,5 +1,67 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+   BuildSecurityGroup:
+      Description: 'ID of a security group for build instances, which require Internet access.'
+      Type: 'AWS::EC2::SecurityGroup::Id'
+   BuildSubnet:
+      Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
+      Type: 'AWS::EC2::Subnet::Id'
+   CodeBuildSecurityGroup:
+      Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
+      Type: 'AWS::EC2::SecurityGroup::Id'
+   CodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
+      Type: String
+      Default: 'https://github.com/kalrish/aws-vibes.git'
+   ServerSecurityGroups:
+      Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+   ServerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place server instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+   Vpc:
+      Description: 'ID of the VPC in which to place the resources.'
+      Type: 'AWS::EC2::VPC::Id'
+   WorkerSecurityGroups:
+      Description: 'ID of a security group for worker instances.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+   WorkerSubnet:
+      Description: 'ID of a subnet within the VPC in which to place worker instances.'
+      Type: 'AWS::EC2::Subnet::Id'
+Metadata:
+   AWS::CloudFormation::Interface:
+      ParameterGroups:
+         -
+            Label:
+               default: Sources
+            Parameters:
+               - CodeRepositoryCloneUrlHttp
+         -
+            Label:
+               default: VPC configuration
+            Parameters:
+               - Vpc
+               - BuildSubnet
+               - WorkerSubnet
+               - ServerSubnet
+               - CodeBuildSecurityGroup
+               - BuildSecurityGroup
+               - WorkerSecurityGroups
+               - ServerSecurityGroups
+      ParameterLabels:
+         BuildSubnet:
+            default: Build subnet
+         CodeBuildSecurityGroup:
+            default: CodeBuild security group
+         CodeRepositoryCloneUrlHttp:
+            default: aws-vibes repository
+         ServerSubnet:
+            default: Server subnet
+         Vpc:
+            default: VPC
+         WorkerSubnet:
+            default: Worker subnet
 Resources:
    SourcesBucket:
       Type: 'AWS::S3::Bucket'
@@ -8,14 +70,986 @@ Resources:
             -
                Key: vibes
                Value: sources
-Outputs:
-   SourcesBucket:
-      Description: 'Name of the source bucket.'
-      Value: !Ref SourcesBucket
-      Export:
-         Name: vibes-SourcesBucket
-   SourcesBucketArn:
-      Description: 'ARN of the source bucket.'
-      Value: !GetAtt SourcesBucket.Arn
-      Export:
-         Name: vibes-SourcesBucketArn
+   BuildContainerSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
+         VpcId: !Ref Vpc
+   BuildInstanceSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
+         SecurityGroupIngress:
+            -
+               SourceSecurityGroupId: !GetAtt BuildContainerSecurityGroup.GroupId
+               FromPort: 22
+               ToPort: 22
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
+   SourcesVolumeBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: parameters
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:GetParameters'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
+            -
+               PolicyName: cloudwatch
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'cloudwatch:GetMetricStatistics'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: ec2
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ebs-sources'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-build'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Effect: Allow
+                     -
+                        Action: 'iam:PassRole'
+                        Resource: !GetAtt SourcesInstanceRole.Arn
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ebs-sources'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Condition:
+                           StringEquals:
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/vibes: sources
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'CreateSnapshot'
+                              aws:RequestTag/vibes: sources
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeLaunchTemplates'
+                           - 'ec2:DescribeLaunchTemplateVersions'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+   SourcesVolumeBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${SourcesVolumeBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref SourcesVolumeBuildRole
+   SourcesInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: sources
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 's3:ListBucket'
+                        Resource: !GetAtt SourcesBucket.Arn
+                        Effect: Allow
+                     -
+                        Action: 's3:GetObject'
+                        Resource: !Join [ '/', [ !GetAtt SourcesBucket.Arn, '*' ] ]
+                        Effect: Allow
+   SourcesInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref SourcesInstanceRole
+   SourcesVolumeBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: vibes-ec2-ebs-sources
+         Description: 'Create and prepare EBS volume to store music sources.'
+         ServiceRole: !GetAtt SourcesVolumeBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-ebs-sources.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup} ${BuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: INSTANCE_PROFILE
+                  Type: PLAINTEXT
+                  Value: !Ref SourcesInstanceProfile
+               -
+                  Name: SOURCES_BUCKET
+                  Type: PLAINTEXT
+                  Value: !Ref SourcesBucket
+               -
+                  Name: WORKER_LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerLaunchTemplate
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt BuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
+   BuildsVolumeBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: parameters
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:GetParameters'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
+            -
+               PolicyName: ec2
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ebs-builds'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-build'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ebs-builds'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Condition:
+                           StringEquals:
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/vibes: builds
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'CreateSnapshot'
+                              aws:RequestTag/vibes: builds
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action:
+                           - 'ec2:DescribeLaunchTemplates'
+                           - 'ec2:DescribeLaunchTemplateVersions'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+   BuildsVolumeBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${BuildsVolumeBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+   BuildsVolumeBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: vibes-ec2-ebs-builds
+         Description: 'Create and prepare EBS volume to store music builds.'
+         ServiceRole: !GetAtt BuildsVolumeBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-ebs-builds.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup} ${BuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: WORKER_LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerLaunchTemplate
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt BuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
+   VolmgrAmiParameter:
+      Type: 'AWS::SSM::Parameter'
+      Properties:
+         Name: '/vibes/ec2/ami/volmgr'
+         Type: String
+         Description: 'ID of the vibes volume manager AMI.'
+         Value: dummy
+   VolmgrAmiBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-volmgr'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ami-volmgr'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: parameters
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:PutParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
+   VolmgrAmiBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${VolmgrAmiBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref VolmgrAmiBuildRole
+   VolmgrAmiBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: vibes-ec2-ami-volmgr
+         Description: 'Build AMI to manage music volumes.'
+         ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-ami.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: volmgr
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt BuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
+   WorkerAmiBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-worker'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-build'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'iam:PassRole'
+                        Resource: !GetAtt WorkerInstanceRole.Arn
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ami-worker'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
+                        Effect: Allow
+   WorkerAmiBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${WorkerAmiBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref WorkerAmiBuildRole
+   WorkerInstanceRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'ec2.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: profiles
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:GetParametersByPath'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles'
+                        Effect: Allow
+                     -
+                        Action: 'ssm:GetParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
+                        Effect: Allow
+   WorkerInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+         Roles:
+            - !Ref WorkerInstanceRole
+   WorkerAmiBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: vibes-ec2-ami-worker
+         Description: 'Build AMI to compile music library.'
+         ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-ami.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: worker
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: INSTANCE_PROFILE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerInstanceProfile
+               -
+                  Name: CODE_REPOSITORY
+                  Type: PLAINTEXT
+                  Value: !Ref CodeRepositoryCloneUrlHttp
+               -
+                  Name: LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref WorkerLaunchTemplate
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt BuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
+   ServerAmiBuildRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: 'codebuild.amazonaws.com'
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: packer
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeImages'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Packer: 'vibes-ami-server'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeInstances'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Packer: 'vibes-ami-server'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:CreateImage'
+                           - 'ec2:RegisterImage'
+                           - 'ec2:ModifyImageAttribute'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:DescribeVolumes'
+                        Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
+                        Effect: Allow
+   ServerAmiBuildLogsPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ServerAmiBuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref ServerAmiBuildRole
+   ServerAmiBuildProject:
+      Type: 'AWS::CodeBuild::Project'
+      Properties:
+         Name: vibes-ec2-ami-server
+         Description: 'Build AMI to serve music library.'
+         ServiceRole: !GetAtt ServerAmiBuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-ami.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ami-build-env'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: NAME
+                  Type: PLAINTEXT
+                  Value: server
+               -
+                  Name: INSTANCE_VPC
+                  Type: PLAINTEXT
+                  Value: !Ref Vpc
+               -
+                  Name: INSTANCE_SUBNET
+                  Type: PLAINTEXT
+                  Value: !Ref BuildSubnet
+               -
+                  Name: INSTANCE_SECURITY_GROUPS
+                  Type: PLAINTEXT
+                  Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref ServerLaunchTemplate
+         VpcConfig:
+            VpcId: !Ref Vpc
+            Subnets:
+               - !Ref BuildSubnet
+            SecurityGroupIds:
+               - !Ref CodeBuildSecurityGroup
+               - !GetAtt BuildContainerSecurityGroup.GroupId
+         Artifacts:
+            Type: NO_ARTIFACTS
+      DependsOn: CodeBuildVpcPolicy
+   CodeBuildVpcPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codebuild-vpc
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'ec2:CreateNetworkInterface'
+                     - 'ec2:DeleteNetworkInterface'
+                     - 'ec2:DescribeDhcpOptions'
+                     - 'ec2:DescribeNetworkInterfaces'
+                     - 'ec2:DescribeSecurityGroups'
+                     - 'ec2:DescribeSubnets'
+                     - 'ec2:DescribeVpcs'
+                  Resource: '*'
+                  Effect: Allow
+               -
+                  Action: 'ec2:CreateNetworkInterfacePermission'
+                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                  Condition:
+                     StringEquals:
+                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                        ec2:AuthorizedService: 'codebuild.amazonaws.com'
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+            - !Ref SourcesVolumeBuildRole
+            - !Ref VolmgrAmiBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+   BuildKeyPolicy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+         PolicyName: codebuild-key
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action: 'ssm:GetParameters'
+                  Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+            - !Ref SourcesVolumeBuildRole
+            - !Ref VolmgrAmiBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+   WorkerLaunchTemplate:
+      Type: 'AWS::EC2::LaunchTemplate'
+      Properties:
+         LaunchTemplateName: vibes-worker
+         LaunchTemplateData:
+            InstanceType: c5.2xlarge
+            IamInstanceProfile:
+               Arn: !GetAtt WorkerInstanceProfile.Arn
+            KeyName: vibes-worker
+            BlockDeviceMappings:
+               -
+                  DeviceName: /dev/xvdf
+                  Ebs:
+                     DeleteOnTermination: true
+                     VolumeSize: 0
+               -
+                  DeviceName: /dev/xvdg
+                  Ebs:
+                     DeleteOnTermination: true
+                     VolumeSize: 0
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups: !Ref WorkerSecurityGroups
+                  SubnetId: !Ref WorkerSubnet
+                  AssociatePublicIpAddress: false
+   ServerLaunchTemplate:
+      Type: 'AWS::EC2::LaunchTemplate'
+      Properties:
+         LaunchTemplateName: vibes-server
+         LaunchTemplateData:
+            InstanceType: m5.large
+            KeyName: vibes-server
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups: !Ref ServerSecurityGroups
+                  SubnetId: !Ref ServerSubnet
+                  AssociatePublicIpAddress: true

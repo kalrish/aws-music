@@ -12,8 +12,10 @@
 	"provisioners": [
 		{
 			"type": "shell",
-			"script": "ami-prepare.sh",
-			"execute_command": "/usr/bin/bash -ex -- {{ .Path }}"
+			"inline": [
+				"pacman --color never --noprogressbar --noconfirm -Sqy python"
+			],
+			"inline_shebang": "/usr/bin/bash -ex"
 		},
 		{
 			"type": "ansible",
