@@ -7,9 +7,9 @@ Parameters:
    BuildSubnet:
       Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
       Type: 'AWS::EC2::Subnet::Id'
-   CodeBuildSecurityGroup:
-      Description: 'ID of a security group for CodeBuild projects, which require Internet access.'
-      Type: 'AWS::EC2::SecurityGroup::Id'
+   CodeBuildSecurityGroups:
+      Description: 'IDs of security groups to assign to CodeBuild projects, which require Internet access and, therefore, access to the NAT instance, should you be using one.'
+      Type: 'List<AWS::EC2::SecurityGroup::Id>'
    CodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
       Type: String
@@ -45,15 +45,15 @@ Metadata:
                - BuildSubnet
                - WorkerSubnet
                - ServerSubnet
-               - CodeBuildSecurityGroup
+               - CodeBuildSecurityGroups
                - BuildSecurityGroup
                - WorkerSecurityGroups
                - ServerSecurityGroups
       ParameterLabels:
          BuildSubnet:
             default: Build subnet
-         CodeBuildSecurityGroup:
-            default: CodeBuild security group
+         CodeBuildSecurityGroups:
+            default: CodeBuild security groups
          CodeRepositoryCloneUrlHttp:
             default: aws-vibes repository
          ServerSubnet:
@@ -261,7 +261,7 @@ Resources:
    SourcesVolumeBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: vibes-ec2-ebs-sources
+         Name: vibes-ebs-sources
          Description: 'Create and prepare EBS volume to store music sources.'
          ServiceRole: !GetAtt SourcesVolumeBuildRole.Arn
          Source:
@@ -303,9 +303,11 @@ Resources:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref BuildSubnet
-            SecurityGroupIds:
-               - !Ref CodeBuildSecurityGroup
-               - !GetAtt BuildContainerSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildContainerSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
@@ -441,7 +443,7 @@ Resources:
    BuildsVolumeBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: vibes-ec2-ebs-builds
+         Name: vibes-ebs-builds
          Description: 'Create and prepare EBS volume to store music builds.'
          ServiceRole: !GetAtt BuildsVolumeBuildRole.Arn
          Source:
@@ -475,9 +477,11 @@ Resources:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref BuildSubnet
-            SecurityGroupIds:
-               - !Ref CodeBuildSecurityGroup
-               - !GetAtt BuildContainerSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildContainerSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
@@ -524,7 +528,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-build'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -585,7 +589,7 @@ Resources:
    VolmgrAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: vibes-ec2-ami-volmgr
+         Name: vibes-ami-volmgr
          Description: 'Build AMI to manage music volumes.'
          ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
          Source:
@@ -619,9 +623,11 @@ Resources:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref BuildSubnet
-            SecurityGroupIds:
-               - !Ref CodeBuildSecurityGroup
-               - !GetAtt BuildContainerSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildContainerSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
@@ -764,7 +770,7 @@ Resources:
    WorkerAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: vibes-ec2-ami-worker
+         Name: vibes-ami-worker
          Description: 'Build AMI to compile music library.'
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
@@ -810,9 +816,11 @@ Resources:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref BuildSubnet
-            SecurityGroupIds:
-               - !Ref CodeBuildSecurityGroup
-               - !GetAtt BuildContainerSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildContainerSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
@@ -852,7 +860,7 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
-                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-packer'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-build'
                         Effect: Allow
                      -
                         Action: 'ec2:CreateTags'
@@ -921,7 +929,7 @@ Resources:
    ServerAmiBuildProject:
       Type: 'AWS::CodeBuild::Project'
       Properties:
-         Name: vibes-ec2-ami-server
+         Name: vibes-ami-server
          Description: 'Build AMI to serve music library.'
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
@@ -959,9 +967,11 @@ Resources:
             VpcId: !Ref Vpc
             Subnets:
                - !Ref BuildSubnet
-            SecurityGroupIds:
-               - !Ref CodeBuildSecurityGroup
-               - !GetAtt BuildContainerSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildContainerSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
