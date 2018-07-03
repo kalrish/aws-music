@@ -29,7 +29,7 @@ Deployment
      
      2.  Then, prepare the main stack.
      
-         $  aws codebuild start-build --project-name vibes-meta
+             $  aws codebuild start-build --project-name vibes-meta
      
      Du.
  
