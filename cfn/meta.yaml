@@ -1,0 +1,82 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+   CodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
+      Type: String
+      Default: 'https://github.com/kalrish/aws-vibes.git'
+Metadata:
+   AWS::CloudFormation::Interface:
+      ParameterGroups:
+         -
+            Label:
+               default: Sources
+            Parameters:
+               - CodeRepositoryCloneUrlHttp
+      ParameterLabels:
+         CodeRepositoryCloneUrlHttp:
+            default: aws-vibes repository
+Resources:
+   StackBucket:
+      Type: AWS::S3::Bucket
+   BuildRole:
+      Type: AWS::IAM::Role
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: codebuild.amazonaws.com
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: s3
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 's3:PutObject'
+                        Resource: !Sub '${StackBucket.Arn}/*'
+                        Effect: Allow
+   BuildLogsPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+         PolicyName: logs
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'logs:CreateLogGroup'
+                     - 'logs:CreateLogStream'
+                     - 'logs:PutLogEvents'
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${BuildProject}:*'
+                  Effect: Allow
+         Roles:
+            - !Ref BuildRole
+   BuildProject:
+      Type: AWS::CodeBuild::Project
+      Properties:
+         Name: vibes-meta
+         Description: 'Assemble the vibes CloudFormation stack, building and packaging the associated lambda functions.'
+         ServiceRole: !GetAtt BuildRole.Arn
+         Source:
+            Type: GITHUB
+            Location: !Ref CodeRepositoryCloneUrlHttp
+            GitCloneDepth: 1
+            BuildSpec: 'buildspec-meta.yaml'
+         Environment:
+            Type: LINUX_CONTAINER
+            ComputeType: BUILD_GENERAL1_SMALL
+            Image: 'aws/codebuild/golang:1.10'
+            PrivilegedMode: false
+            EnvironmentVariables:
+               -
+                  Name: BUCKET
+                  Type: PLAINTEXT
+                  Value: !Ref StackBucket
+         Artifacts:
+            Type: S3
+            Location: !Ref StackBucket

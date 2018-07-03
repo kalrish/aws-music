@@ -3,32 +3,32 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
    BuildSecurityGroup:
       Description: 'ID of a security group for build instances, which require Internet access.'
-      Type: 'AWS::EC2::SecurityGroup::Id'
+      Type: AWS::EC2::SecurityGroup::Id
    BuildSubnet:
       Description: 'ID of a private subnet with Internet access within the VPC in which to place CodeBuild projects and build instances, used to provision EBS volumes and to create AMIs.'
-      Type: 'AWS::EC2::Subnet::Id'
+      Type: AWS::EC2::Subnet::Id
    CodeBuildSecurityGroups:
       Description: 'IDs of security groups to assign to CodeBuild projects, which require Internet access and, therefore, access to the NAT instance, should you be using one.'
-      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+      Type: List<AWS::EC2::SecurityGroup::Id>
    CodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository hosting the aws-vibes code.'
       Type: String
       Default: 'https://github.com/kalrish/aws-vibes.git'
    ServerSecurityGroups:
       Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
-      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+      Type: List<AWS::EC2::SecurityGroup::Id>
    ServerSubnet:
       Description: 'ID of a subnet within the VPC in which to place server instances.'
-      Type: 'AWS::EC2::Subnet::Id'
+      Type: AWS::EC2::Subnet::Id
    Vpc:
       Description: 'ID of the VPC in which to place the resources.'
-      Type: 'AWS::EC2::VPC::Id'
+      Type: AWS::EC2::VPC::Id
    WorkerSecurityGroups:
       Description: 'ID of a security group for worker instances.'
-      Type: 'List<AWS::EC2::SecurityGroup::Id>'
+      Type: List<AWS::EC2::SecurityGroup::Id>
    WorkerSubnet:
       Description: 'ID of a subnet within the VPC in which to place worker instances.'
-      Type: 'AWS::EC2::Subnet::Id'
+      Type: AWS::EC2::Subnet::Id
 Metadata:
    AWS::CloudFormation::Interface:
       ParameterGroups:
@@ -64,19 +64,19 @@ Metadata:
             default: Worker subnet
 Resources:
    SourcesBucket:
-      Type: 'AWS::S3::Bucket'
+      Type: AWS::S3::Bucket
       Properties:
          Tags:
             -
                Key: vibes
                Value: sources
    BuildContainerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
+      Type: AWS::EC2::SecurityGroup
       Properties:
          GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
          VpcId: !Ref Vpc
    BuildInstanceSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
+      Type: AWS::EC2::SecurityGroup
       Properties:
          GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
          SecurityGroupIngress:
@@ -87,14 +87,14 @@ Resources:
                IpProtocol: tcp
          VpcId: !Ref Vpc
    SourcesVolumeBuildRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'codebuild.amazonaws.com'
+                     Service: codebuild.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -213,7 +213,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
    SourcesVolumeBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: logs
          PolicyDocument:
@@ -229,14 +229,14 @@ Resources:
          Roles:
             - !Ref SourcesVolumeBuildRole
    SourcesInstanceRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'ec2.amazonaws.com'
+                     Service: ec2.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -254,12 +254,12 @@ Resources:
                         Resource: !Join [ '/', [ !GetAtt SourcesBucket.Arn, '*' ] ]
                         Effect: Allow
    SourcesInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
+      Type: AWS::IAM::InstanceProfile
       Properties:
          Roles:
             - !Ref SourcesInstanceRole
    SourcesVolumeBuildProject:
-      Type: 'AWS::CodeBuild::Project'
+      Type: AWS::CodeBuild::Project
       Properties:
          Name: vibes-ebs-sources
          Description: 'Create and prepare EBS volume to store music sources.'
@@ -312,14 +312,14 @@ Resources:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
    BuildsVolumeBuildRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'codebuild.amazonaws.com'
+                     Service: codebuild.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -425,7 +425,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
    BuildsVolumeBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: logs
          PolicyDocument:
@@ -441,7 +441,7 @@ Resources:
          Roles:
             - !Ref BuildsVolumeBuildRole
    BuildsVolumeBuildProject:
-      Type: 'AWS::CodeBuild::Project'
+      Type: AWS::CodeBuild::Project
       Properties:
          Name: vibes-ebs-builds
          Description: 'Create and prepare EBS volume to store music builds.'
@@ -486,21 +486,21 @@ Resources:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
    VolmgrAmiParameter:
-      Type: 'AWS::SSM::Parameter'
+      Type: AWS::SSM::Parameter
       Properties:
          Name: '/vibes/ec2/ami/volmgr'
          Type: String
          Description: 'ID of the vibes volume manager AMI.'
          Value: dummy
    VolmgrAmiBuildRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'codebuild.amazonaws.com'
+                     Service: codebuild.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -571,7 +571,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
                         Effect: Allow
    VolmgrAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: logs
          PolicyDocument:
@@ -587,7 +587,7 @@ Resources:
          Roles:
             - !Ref VolmgrAmiBuildRole
    VolmgrAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
+      Type: AWS::CodeBuild::Project
       Properties:
          Name: vibes-ami-volmgr
          Description: 'Build AMI to manage music volumes.'
@@ -632,14 +632,14 @@ Resources:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
    WorkerAmiBuildRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'codebuild.amazonaws.com'
+                     Service: codebuild.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -722,7 +722,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                         Effect: Allow
    WorkerAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: logs
          PolicyDocument:
@@ -738,14 +738,14 @@ Resources:
          Roles:
             - !Ref WorkerAmiBuildRole
    WorkerInstanceRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'ec2.amazonaws.com'
+                     Service: ec2.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -763,12 +763,12 @@ Resources:
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
                         Effect: Allow
    WorkerInstanceProfile:
-      Type: 'AWS::IAM::InstanceProfile'
+      Type: AWS::IAM::InstanceProfile
       Properties:
          Roles:
             - !Ref WorkerInstanceRole
    WorkerAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
+      Type: AWS::CodeBuild::Project
       Properties:
          Name: vibes-ami-worker
          Description: 'Build AMI to compile music library.'
@@ -825,14 +825,14 @@ Resources:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
    ServerAmiBuildRole:
-      Type: 'AWS::IAM::Role'
+      Type: AWS::IAM::Role
       Properties:
          AssumeRolePolicyDocument:
             Version: '2012-10-17'
             Statement:
                -
                   Principal:
-                     Service: 'codebuild.amazonaws.com'
+                     Service: codebuild.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
          Policies:
@@ -911,7 +911,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${ServerLaunchTemplate}'
                         Effect: Allow
    ServerAmiBuildLogsPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: logs
          PolicyDocument:
@@ -927,7 +927,7 @@ Resources:
          Roles:
             - !Ref ServerAmiBuildRole
    ServerAmiBuildProject:
-      Type: 'AWS::CodeBuild::Project'
+      Type: AWS::CodeBuild::Project
       Properties:
          Name: vibes-ami-server
          Description: 'Build AMI to serve music library.'
@@ -976,7 +976,7 @@ Resources:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
    CodeBuildVpcPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: codebuild-vpc
          PolicyDocument:
@@ -999,7 +999,7 @@ Resources:
                   Condition:
                      StringEquals:
                         ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
-                        ec2:AuthorizedService: 'codebuild.amazonaws.com'
+                        ec2:AuthorizedService: codebuild.amazonaws.com
                   Effect: Allow
          Roles:
             - !Ref BuildsVolumeBuildRole
@@ -1008,7 +1008,7 @@ Resources:
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
    BuildKeyPolicy:
-      Type: 'AWS::IAM::Policy'
+      Type: AWS::IAM::Policy
       Properties:
          PolicyName: codebuild-key
          PolicyDocument:
@@ -1024,8 +1024,31 @@ Resources:
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
+   LambdasBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+         Tags:
+            -
+               Key: vibes
+               Value: lambdas
+   BuildFunctionSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+         GroupDescription: 'Lambda build function.'
+         VpcId: !Ref Vpc
+   WorkerInstanceSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+         GroupDescription: 'Worker instance.'
+         SecurityGroupIngress:
+            -
+               SourceSecurityGroupId: !GetAtt BuildFunctionSecurityGroup.GroupId
+               FromPort: 22
+               ToPort: 22
+               IpProtocol: tcp
+         VpcId: !Ref Vpc
    WorkerLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
+      Type: AWS::EC2::LaunchTemplate
       Properties:
          LaunchTemplateName: vibes-worker
          LaunchTemplateData:
@@ -1047,11 +1070,51 @@ Resources:
             NetworkInterfaces:
                -
                   DeviceIndex: 0
-                  Groups: !Ref WorkerSecurityGroups
+                  Groups: !Split
+                     - ','
+                     - !Sub
+                        - '${WorkerInstanceSecurityGroup.GroupId},${list}'
+                        - list: !Join [ ',' , !Ref WorkerSecurityGroups ]
                   SubnetId: !Ref WorkerSubnet
                   AssociatePublicIpAddress: false
+   BuildFunctionRole:
+      Type: AWS::IAM::Role
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: lambda.amazonaws.com
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: ec2
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:GetParameters'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Effect: Allow
+   BuildFunction:
+      Type: AWS::Lambda::Function
+      Properties:
+         Code:
+            S3Bucket: !Ref LambdasBucket
+            S3Key: build
+         Handler: build
+         Role: !GetAtt BuildFunctionRole.Arn
+         Runtime: go1.x
+         Timeout: 300
+         VpcConfig:
+            SubnetIds:
+               - !Ref WorkerSubnet
+            SecurityGroupIds:
+               - !GetAtt BuildFunctionSecurityGroup.GroupId
    ServerLaunchTemplate:
-      Type: 'AWS::EC2::LaunchTemplate'
+      Type: AWS::EC2::LaunchTemplate
       Properties:
          LaunchTemplateName: vibes-server
          LaunchTemplateData:

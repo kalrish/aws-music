@@ -1,0 +1,12 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - GOOS=linux go build
+         - zip
+         - aws cloudformation package --template-file cfn/main.yaml --output-template-file cfn.yaml --s3-bucket "${BUCKET}"
+
+artifacts:
+   - cfn.yaml
