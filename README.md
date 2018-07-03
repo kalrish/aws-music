@@ -15,18 +15,36 @@ Deployment
 
  1.  Set up the VPC.
  
-     If you wish to create a new VPC, go ahead and deploy a new CloudFormation stack based on the `ec2/cfn/vpc.yaml` template.
+     If you wish to create a new VPC, go ahead and deploy a new CloudFormation stack based on the `cfn/vpc.yaml` template.
      
      Consider reusing an existing one if it's set up with a NAT gateway or an EC2 endpoint, which are expensive and wouldn't be worth creating for these purposes but which could be advantageous. It might also be a good idea if the vibes builds are to be consumed by an application or service of yours.
+     
+     For instance, you might want to start your SSH bridge –commonly known as “bastion host”– or your NAT instance.
  
- 2.  Deploy a new CloudFormation stack based on the `cfn/main.yaml` template.
+ 2.  Prepare the main stack.
+ 
+     Since the system involves some lambda functions and they are part of the main stack, it is tricky to deploy it. To automate the process, an ad-hoc stack build the lambda functions, packages them and uploads them, then generates the main stack template.
+     
+     1.  Deploy a new CloudFormation stack based on the `cfn/meta.yaml` template.
+     
+     2.  Then, prepare the main stack.
+     
+         $  aws codebuild start-build --project-name vibes-meta
+     
+     Du.
+ 
+ 2.  Deploy the main stack.
+ 
+     Deploy a new CloudFormation stack based on the template which was generated in the previous step by the `vibes-meta` CodeBuild project.
  
  3.  Upload the vibes sources to the sources bucket.
  
          $  aws s3 sync /path/to/vibes/sources "s3://$(aws --query 'Parameter.Value' --output text ssm get-parameter --name /vibes/sources)"
  
- 4.  Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each profile.
+ 4.  Set up the tup-vibes profiles.
  
+     Deploy a new CloudFormation stack based on the `cfn/profile.yaml` template for each profile.
+     
      The profile configuration may be entered directly or uploaded using the AWS CLI:
      
          $  aws ssm put-parameter --overwrite --name "/vibes/profiles/${PROFILE}" --type String --value "file://${PROFILE}.config"
@@ -44,13 +62,9 @@ Deployment
          $  for NAME in worker server ; do aws --query 'KeyMaterial' --output text ec2 create-key-pair --key-name vibes-${NAME} > ~/.ssh/vibes-${NAME}.pem && chmod 0600 ~/.ssh/vibes-${NAME}.pem ; done
      
      Those commands will get you the private keys and store them with appropriate permissions.
-
- 6.  Set up the VPC.
-
-     For instance, you might want to start your SSH bridge –commonly known as “bastion host”– or your NAT instance.
-
- 7.  Build the AMIs.
-
+ 
+ 6.  Build the AMIs.
+ 
      Thanks to Packer, this is a fully automated process. We just have to start a build of the relevant CodeBuild projects.
      
      Let `PROJECT` be each of `volmgr`, `worker` and `server`, then start a build of the CodeBuild project:
@@ -62,9 +76,9 @@ Deployment
          $  aws --query 'events[*].message' --output text logs get-log-events --log-group-name /aws/codebuild/vibes-ec2-ami-$PROJECT --log-stream-name "$(aws --query 'builds[0].logs.streamName' --output text codebuild batch-get-builds --ids "$BUILD_ID")" | sed -e 's/^[ \t]*\(\[Container\][ \t]*\)\?//'
      
      Or just visit the web console.
-
- 8.  Create the volumes.
-
+ 
+ 7.  Create the volumes.
+ 
      Due to a Packer bug, this had to be automated by hand –if that makes any sense–, but that should be transparent to the user, who must merely start a couple of CodeBuild builds.
       
          $  aws codebuild start-build --project-name vibes-ec2-ebs-sources
@@ -73,9 +87,9 @@ Deployment
      That should get you going.
      
      The creation of the sources volume may take long, depending on the instance type you choose to perform the task and on your VPC configuration. Among other factors, the type of your NAT instance, if you have one, makes a difference.
-
- 9.  Compile the library.
-
+ 
+ 8.  Compile the library.
+ 
      1.  Launch a worker instance.
      
          You can use the launch template:
@@ -131,9 +145,9 @@ Deployment
      7.  Terminate the instance.
      
          This will also delete the volumes.
-
-10.  Get your music.
-
+ 
+ 9.  Get your music.
+ 
      1.  Launch a server instance.
      
          You can use the launch template:
@@ -142,4 +156,6 @@ Deployment
           
          Choose an instance type with good network bandwidth. Barely any compute power is needed.
      
-     2.  Attach the builds volume to the instance.
+     2.  Get the instance's public IP address.
+     
+     3.  Connect to the instance. Download the build corresponding to the relevant profile.
