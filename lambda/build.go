@@ -13,10 +13,10 @@ func build () (string, error) {
 	rv, err := client.RunInstances(
 		&ec2.RunInstancesInput{
 			LaunchTemplate: &ec2.LaunchTemplateSpecification{
-				LaunchTemplateName: "vibes-worker",
+				LaunchTemplateName: aws.String("vibes-worker"),
 			},
-			MinCount: 1,
-			MaxCount: 1,
+			MinCount: aws.Int64(1),
+			MaxCount: aws.Int64(1),
 		},
 	)
 
