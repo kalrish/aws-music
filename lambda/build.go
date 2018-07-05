@@ -23,6 +23,7 @@ func build () (string, error) {
 
 	if err == nil {
 		log.Println("Successfully launched worker instance")
+		log.Println("Worker instance ID: ", *rv.Instances[0].InstanceId)
 
 		return "Hello ƛ!", nil
 	} else {
