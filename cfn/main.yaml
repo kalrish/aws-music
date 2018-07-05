@@ -70,12 +70,12 @@ Resources:
    BuildContainerSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-         GroupDescription: 'For CodeBuild to access volume manager AMI build instances.'
+         GroupDescription: 'CodeBuild projects building AMIs and EBS volumes, which must access the instances used to that end over SSH.'
          VpcId: !Ref Vpc
    BuildInstanceSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-         GroupDescription: 'For volume manager AMI build instances to be accessed by CodeBuild.'
+         GroupDescription: 'Build instances, which are used to build AMIs and EBS volumes and must be accessible by CodeBuild over SSH.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt BuildContainerSecurityGroup.GroupId
@@ -1095,12 +1095,12 @@ Resources:
    BuildFunctionSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-         GroupDescription: 'Lambda build function.'
+         GroupDescription: 'Lambda build function, which must be able to communicate with the worker instance over SSH.'
          VpcId: !Ref Vpc
    WorkerInstanceSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-         GroupDescription: 'Worker instance.'
+         GroupDescription: 'Worker instances, which must allow SSH access by the build lambda.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt BuildFunctionSecurityGroup.GroupId
@@ -1178,7 +1178,7 @@ Resources:
    ServerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'For the server instance to be accessible.'
+         GroupDescription: 'Server instances, which must be accessible to the world.'
          SecurityGroupIngress:
             -
                CidrIp: 0.0.0.0/0
