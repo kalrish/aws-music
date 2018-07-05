@@ -4,12 +4,10 @@ import (
     "github.com/aws/aws-lambda-go/lambda"
 )
 
-func hello () (string, error)
-{
+func hello () (string, error) {
     return "Hello ƛ!", nil
 }
 
-func main ()
-{
+func main () {
     lambda.Start(hello)
 }
