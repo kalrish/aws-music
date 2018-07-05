@@ -1093,7 +1093,7 @@ Resources:
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
                         Effect: Allow
    BuildFunction:
-      Type: AWS::Serverless::Function
+      Type: AWS::Lambda::Function
       Properties:
          CodeUri: ../lambda/build.zip
          Handler: build
