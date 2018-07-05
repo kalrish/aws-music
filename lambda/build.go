@@ -25,6 +25,14 @@ func build () (string, error) {
 		log.Println("Successfully launched worker instance")
 		log.Println("Worker instance ID: ", *rv.Instances[0].InstanceId)
 
+		client.TerminateInstances(
+			&ec2.TerminateInstancesInput{
+				InstanceIds: []*string{
+					*rv.Instances[0].InstanceId,
+				},
+			},
+		)
+
 		return "Hello ƛ!", nil
 	} else {
 		log.Println("Could not launch worker instance")

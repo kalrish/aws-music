@@ -27,5 +27,6 @@ Resources:
       Type: 'AWS::SSM::Parameter'
       Properties:
          Name: !Sub '/vibes/profiles/${Name}'
+         Description: !Sub 'Tup configuration associated with the ${Name} profile.'
          Type: String
          Value: !Join [ "\n" , [ !Join [ "\n" , !Ref Config ] , '' ] ]

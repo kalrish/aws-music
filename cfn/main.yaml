@@ -493,8 +493,8 @@ Resources:
       Type: AWS::SSM::Parameter
       Properties:
          Name: '/vibes/ami/volmgr'
-         Type: String
          Description: 'ID of the vibes volume manager AMI.'
+         Type: String
          Value: dummy
    VolmgrAmiBuildRole:
       Type: AWS::IAM::Role
@@ -660,8 +660,8 @@ Resources:
       Type: AWS::SSM::Parameter
       Properties:
          Name: '/vibes/ami/worker'
-         Type: String
          Description: 'ID of the vibes worker AMI.'
+         Type: String
          Value: dummy
    WorkerAmiBuildRole:
       Type: AWS::IAM::Role
@@ -869,8 +869,8 @@ Resources:
       Type: AWS::SSM::Parameter
       Properties:
          Name: '/vibes/ami/server'
-         Type: String
          Description: 'ID of the vibes server AMI.'
+         Type: String
          Value: dummy
    ServerAmiBuildRole:
       Type: AWS::IAM::Role
@@ -1165,9 +1165,63 @@ Resources:
                   Version: '2012-10-17'
                   Statement:
                      -
-                        Action: 'ssm:GetParameters'
+                        Action: 'ssm:GetParameter'
                         Resource:
                            - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WorkerAmiParameter}'
+                        Effect: Allow
+            -
+               PolicyName: ec2
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/Manager: 'vibes-lambda-build'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:RunInstances'
+                        Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${WorkerSubnet}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/${WorkerInstanceSecurityGroup}'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-worker'
+                        Effect: Allow
+                     -
+                        Action:
+                           - 'ec2:StopInstances'
+                           - 'ec2:TerminateInstances'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:ResourceTag/Manager: 'vibes-lambda-build'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
+                        Condition:
+                           StringEquals:
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateSnapshot'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              aws:RequestTag/vibes: builds
+                              ec2:Region: !Ref 'AWS::Region'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}::snapshot/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'CreateSnapshot'
+                              aws:RequestTag/vibes: builds
                         Effect: Allow
    BuildFunction:
       Type: AWS::Lambda::Function
