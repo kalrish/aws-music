@@ -87,6 +87,5 @@ Resources:
             Type: S3
             Location: !Ref StackBucket
             NamespaceType: NONE
-            Name: ''
-            Path: ''
+            Name: cfn
             Packaging: NONE

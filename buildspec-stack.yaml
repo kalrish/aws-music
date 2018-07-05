@@ -15,7 +15,7 @@ phases:
          - mv -T -- main-packaged.yaml main.yaml
 
 artifacts:
+   base-directory: cfn
    files:
-      - cfn/*.yaml
-      - lambda/*.zip
+      - '*.yaml'
    discard-paths: no
