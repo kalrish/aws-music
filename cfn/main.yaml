@@ -106,7 +106,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${VolmgrAmiParameter}'
                         Effect: Allow
             -
                PolicyName: cloudwatch
@@ -311,7 +311,7 @@ Resources:
                   - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
-      DependsOn: VpcPolicy
+      DependsOn: CodeBuildVpcPolicy
    BuildsVolumeBuildRole:
       Type: AWS::IAM::Role
       Properties:
@@ -331,7 +331,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${VolmgrAmiParameter}'
                         Effect: Allow
             -
                PolicyName: ec2
@@ -485,7 +485,7 @@ Resources:
                   - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
-      DependsOn: VpcPolicy
+      DependsOn: CodeBuildVpcPolicy
    VolmgrAmiParameter:
       Type: AWS::SSM::Parameter
       Properties:
@@ -569,7 +569,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:PutParameter'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${VolmgrAmiParameter}'
                         Effect: Allow
             -
                PolicyName: launch-template
@@ -652,7 +652,7 @@ Resources:
                   - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
-      DependsOn: VpcPolicy
+      DependsOn: CodeBuildVpcPolicy
    WorkerAmiParameter:
       Type: AWS::SSM::Parameter
       Properties:
@@ -861,7 +861,7 @@ Resources:
                   - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
-      DependsOn: VpcPolicy
+      DependsOn: CodeBuildVpcPolicy
    ServerAmiParameter:
       Type: AWS::SSM::Parameter
       Properties:
@@ -1028,7 +1028,40 @@ Resources:
                   - list: !Join [ ',' , !Ref CodeBuildSecurityGroups ]
          Artifacts:
             Type: NO_ARTIFACTS
-      DependsOn: VpcPolicy
+      DependsOn: CodeBuildVpcPolicy
+   CodeBuildVpcPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+         PolicyName: codebuild-vpc
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'ec2:CreateNetworkInterface'
+                     - 'ec2:DeleteNetworkInterface'
+                     - 'ec2:DescribeDhcpOptions'
+                     - 'ec2:DescribeNetworkInterfaces'
+                     - 'ec2:DescribeSecurityGroups'
+                     - 'ec2:DescribeSubnets'
+                     - 'ec2:DescribeVpcs'
+                  Resource: '*'
+                  Effect: Allow
+               -
+                  Action: 'ec2:CreateNetworkInterfacePermission'
+                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                  Condition:
+                     StringEquals:
+                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                        ec2:AuthorizedService: codebuild.amazonaws.com
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+            - !Ref SourcesVolumeBuildRole
+            - !Ref VolmgrAmiBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+            - !Ref BuildFunctionRole
    BuildKeyPolicy:
       Type: AWS::IAM::Policy
       Properties:
@@ -1120,15 +1153,18 @@ Resources:
                      Service: lambda.amazonaws.com
                   Action: 'sts:AssumeRole'
                   Effect: Allow
+         ManagedPolicyArns:
+            - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
          Policies:
             -
-               PolicyName: ec2
+               PolicyName: parameters
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
+                        Resource:
+                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WorkerAmiParameter}'
                         Effect: Allow
    BuildFunction:
       Type: AWS::Lambda::Function
@@ -1143,7 +1179,6 @@ Resources:
                - !Ref WorkerSubnet
             SecurityGroupIds:
                - !GetAtt BuildFunctionSecurityGroup.GroupId
-      DependsOn: VpcPolicy
    ServerLaunchTemplate:
       Type: AWS::EC2::LaunchTemplate
       Properties:
@@ -1157,36 +1192,3 @@ Resources:
                   Groups: !Ref ServerSecurityGroups
                   SubnetId: !Ref ServerSubnet
                   AssociatePublicIpAddress: true
-   VpcPolicy:
-      Type: AWS::IAM::Policy
-      Properties:
-         PolicyName: codebuild-vpc
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'ec2:CreateNetworkInterface'
-                     - 'ec2:DeleteNetworkInterface'
-                     - 'ec2:DescribeDhcpOptions'
-                     - 'ec2:DescribeNetworkInterfaces'
-                     - 'ec2:DescribeSecurityGroups'
-                     - 'ec2:DescribeSubnets'
-                     - 'ec2:DescribeVpcs'
-                  Resource: '*'
-                  Effect: Allow
-               -
-                  Action: 'ec2:CreateNetworkInterfacePermission'
-                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                  Condition:
-                     StringEquals:
-                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
-                        ec2:AuthorizedService: codebuild.amazonaws.com
-                  Effect: Allow
-         Roles:
-            - !Ref BuildsVolumeBuildRole
-            - !Ref SourcesVolumeBuildRole
-            - !Ref VolmgrAmiBuildRole
-            - !Ref WorkerAmiBuildRole
-            - !Ref ServerAmiBuildRole
-            - !Ref BuildFunctionRole
