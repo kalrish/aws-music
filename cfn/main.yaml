@@ -2,6 +2,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Resources required to create and maintain a platform suitable for building vibes collections.'
 Parameters:
+   AwsCodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code.'
+      Type: String
+      Default: 'https://github.com/kalrish/aws-vibes.git'
    BuildSecurityGroup:
       Description: 'ID of a security group for build instances, which require Internet access.'
       Type: AWS::EC2::SecurityGroup::Id
@@ -11,13 +15,13 @@ Parameters:
    CodeBuildSecurityGroups:
       Description: 'IDs of security groups to assign to CodeBuild projects, which require Internet access and, therefore, access to the NAT instance, should you be using one.'
       Type: List<AWS::EC2::SecurityGroup::Id>
-   CodeRepositoryCloneUrlHttp:
-      Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code.'
-      Type: String
-      Default: 'https://github.com/kalrish/aws-vibes.git'
    ServerSubnet:
       Description: 'ID of a subnet within the VPC in which to place server instances.'
       Type: AWS::EC2::Subnet::Id
+   TupCodeRepositoryCloneUrlHttp:
+      Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code.'
+      Type: String
+      Default: 'https://github.com/kalrish/aws-vibes.git'
    Vpc:
       Description: 'ID of the VPC in which to place the resources.'
       Type: AWS::EC2::VPC::Id
@@ -34,7 +38,8 @@ Metadata:
             Label:
                default: Sources
             Parameters:
-               - CodeRepositoryCloneUrlHttp
+               - AwsCodeRepositoryCloneUrlHttp
+               - TupCodeRepositoryCloneUrlHttp
          -
             Label:
                default: VPC configuration
@@ -47,14 +52,16 @@ Metadata:
                - BuildSecurityGroup
                - WorkerSecurityGroups
       ParameterLabels:
+         AwsCodeRepositoryCloneUrlHttp:
+            default: aws-vibes repository
          BuildSubnet:
             default: Build subnet
          CodeBuildSecurityGroups:
             default: CodeBuild security groups
-         CodeRepositoryCloneUrlHttp:
-            default: aws-vibes repository
          ServerSubnet:
             default: Server subnet
+         TupCodeRepositoryCloneUrlHttp:
+            default: tup-vibes repository
          Vpc:
             default: VPC
          WorkerSubnet:
@@ -263,7 +270,7 @@ Resources:
          ServiceRole: !GetAtt SourcesVolumeBuildRole.Arn
          Source:
             Type: GITHUB
-            Location: !Ref CodeRepositoryCloneUrlHttp
+            Location: !Ref AwsCodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'buildspec-ebs-sources.yaml'
          Environment:
@@ -445,7 +452,7 @@ Resources:
          ServiceRole: !GetAtt BuildsVolumeBuildRole.Arn
          Source:
             Type: GITHUB
-            Location: !Ref CodeRepositoryCloneUrlHttp
+            Location: !Ref AwsCodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'buildspec-ebs-builds.yaml'
          Environment:
@@ -608,7 +615,7 @@ Resources:
          ServiceRole: !GetAtt VolmgrAmiBuildRole.Arn
          Source:
             Type: GITHUB
-            Location: !Ref CodeRepositoryCloneUrlHttp
+            Location: !Ref AwsCodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'buildspec-ami.yaml'
          Environment:
@@ -809,7 +816,7 @@ Resources:
          ServiceRole: !GetAtt WorkerAmiBuildRole.Arn
          Source:
             Type: GITHUB
-            Location: !Ref CodeRepositoryCloneUrlHttp
+            Location: !Ref AwsCodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'buildspec-ami.yaml'
          Environment:
@@ -841,7 +848,7 @@ Resources:
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
-                  Value: !Ref CodeRepositoryCloneUrlHttp
+                  Value: !Ref TupCodeRepositoryCloneUrlHttp
                -
                   Name: LAUNCH_TEMPLATE
                   Type: PLAINTEXT
@@ -984,7 +991,7 @@ Resources:
          ServiceRole: !GetAtt ServerAmiBuildRole.Arn
          Source:
             Type: GITHUB
-            Location: !Ref CodeRepositoryCloneUrlHttp
+            Location: !Ref AwsCodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
             BuildSpec: 'buildspec-ami.yaml'
          Environment:
