@@ -1095,7 +1095,7 @@ Resources:
    BuildFunction:
       Type: AWS::Lambda::Function
       Properties:
-         CodeUri: ../lambda/build.zip
+         Code: ../lambda/build.zip
          Handler: build
          Role: !GetAtt BuildFunctionRole.Arn
          Runtime: go1.x
