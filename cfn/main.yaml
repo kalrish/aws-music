@@ -1145,6 +1145,7 @@ Resources:
                         - list: !Join [ ',' , !Ref WorkerSecurityGroups ]
                   SubnetId: !Ref WorkerSubnet
                   AssociatePublicIpAddress: false
+            InstanceInitiatedShutdownBehavior: terminate
    BuildFunctionRole:
       Type: AWS::IAM::Role
       Properties:
@@ -1184,6 +1185,7 @@ Resources:
                      -
                         Action: 'ec2:RunInstances'
                         Resource:
+                           - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${WorkerLaunchTemplate}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${WorkerSubnet}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:security-group/${WorkerInstanceSecurityGroup}'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
