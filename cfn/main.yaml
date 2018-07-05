@@ -976,38 +976,6 @@ Resources:
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: CodeBuildVpcPolicy
-   CodeBuildVpcPolicy:
-      Type: AWS::IAM::Policy
-      Properties:
-         PolicyName: codebuild-vpc
-         PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Action:
-                     - 'ec2:CreateNetworkInterface'
-                     - 'ec2:DeleteNetworkInterface'
-                     - 'ec2:DescribeDhcpOptions'
-                     - 'ec2:DescribeNetworkInterfaces'
-                     - 'ec2:DescribeSecurityGroups'
-                     - 'ec2:DescribeSubnets'
-                     - 'ec2:DescribeVpcs'
-                  Resource: '*'
-                  Effect: Allow
-               -
-                  Action: 'ec2:CreateNetworkInterfacePermission'
-                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
-                  Condition:
-                     StringEquals:
-                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
-                        ec2:AuthorizedService: codebuild.amazonaws.com
-                  Effect: Allow
-         Roles:
-            - !Ref BuildsVolumeBuildRole
-            - !Ref SourcesVolumeBuildRole
-            - !Ref VolmgrAmiBuildRole
-            - !Ref WorkerAmiBuildRole
-            - !Ref ServerAmiBuildRole
    BuildKeyPolicy:
       Type: AWS::IAM::Policy
       Properties:
@@ -1118,3 +1086,36 @@ Resources:
                   Groups: !Ref ServerSecurityGroups
                   SubnetId: !Ref ServerSubnet
                   AssociatePublicIpAddress: true
+   VpcPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+         PolicyName: codebuild-vpc
+         PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Action:
+                     - 'ec2:CreateNetworkInterface'
+                     - 'ec2:DeleteNetworkInterface'
+                     - 'ec2:DescribeDhcpOptions'
+                     - 'ec2:DescribeNetworkInterfaces'
+                     - 'ec2:DescribeSecurityGroups'
+                     - 'ec2:DescribeSubnets'
+                     - 'ec2:DescribeVpcs'
+                  Resource: '*'
+                  Effect: Allow
+               -
+                  Action: 'ec2:CreateNetworkInterfacePermission'
+                  Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:network-interface/*'
+                  Condition:
+                     StringEquals:
+                        ec2:Subnet: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet/${BuildSubnet}'
+                        ec2:AuthorizedService: codebuild.amazonaws.com
+                  Effect: Allow
+         Roles:
+            - !Ref BuildsVolumeBuildRole
+            - !Ref SourcesVolumeBuildRole
+            - !Ref VolmgrAmiBuildRole
+            - !Ref WorkerAmiBuildRole
+            - !Ref ServerAmiBuildRole
+            - !Ref BuildFunctionRole
