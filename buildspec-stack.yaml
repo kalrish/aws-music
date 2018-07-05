@@ -2,6 +2,9 @@
 version: 0.2
 
 phases:
+   install:
+      commands:
+         - go get -v -d -- lambda/*.go
    build:
       commands:
          - GOOS=linux GOARCH=amd64 go build -o lambda/build -- lambda/build.go
