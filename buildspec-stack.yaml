@@ -8,6 +8,7 @@ phases:
          - go get -v -d -- ./...
    build:
       commands:
+         - env
          - GOOS=linux GOARCH=amd64 go build -x -ldflags '-s -w' -o build -- build.go
          - zip -9 build.zip -- build
          - cd ../cfn

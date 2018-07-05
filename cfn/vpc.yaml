@@ -1,5 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC to sustain a platform suitable for building and hosting vibes collections.'
 Parameters:
    NatInstanceImageId:
       Description: 'ID of the AMI on which to base the NAT instance.'
@@ -62,7 +63,7 @@ Resources:
       Type: 'AWS::EC2::Subnet'
       Properties:
          VpcId: !Ref Vpc
-         CidrBlock: !Select [ 1 , !Cidr [ !GetAtt Vpc.CidrBlock , 2 , 4 ] ]
+         CidrBlock: !Select [ 1 , !Cidr [ !GetAtt Vpc.CidrBlock , 3 , 4 ] ]
          MapPublicIpOnLaunch: true
    PublicRouteTable:
       Type: 'AWS::EC2::RouteTable'
@@ -159,7 +160,7 @@ Resources:
       Type: 'AWS::EC2::Subnet'
       Properties:
          VpcId: !Ref Vpc
-         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 2, 4 ] ]
+         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
          AvailabilityZone: !Ref PrivateSubnetAvailabilityZone
    PrivateRouteTable:
       Type: 'AWS::EC2::RouteTable'
@@ -180,7 +181,7 @@ Resources:
       Type: 'AWS::EC2::Subnet'
       Properties:
          VpcId: !Ref Vpc
-         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
+         CidrBlock: !Select [ 2, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
    ProtectedRouteTable:
       Type: 'AWS::EC2::RouteTable'
       Properties:
@@ -197,15 +198,4 @@ Resources:
          RouteTableIds:
             - !Ref PrivateRouteTable
             - !Ref ProtectedRouteTable
-         VpcId: !Ref Vpc
-   ServerSecurityGroup:
-      Type: 'AWS::EC2::SecurityGroup'
-      Properties:
-         GroupDescription: 'For the server instance to be accessible.'
-         SecurityGroupIngress:
-            -
-               CidrIp: 0.0.0.0/0
-               FromPort: '-1' # 873
-               ToPort: '-1' # 873
-               IpProtocol: '-1' # tcp
          VpcId: !Ref Vpc
