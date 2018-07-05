@@ -1095,7 +1095,7 @@ Resources:
    BuildFunction:
       Type: AWS::Serverless::Function
       Properties:
-         CodeUri: lambda/build.zip
+         CodeUri: ../lambda/build.zip
          Handler: build
          Role: !GetAtt BuildFunctionRole.Arn
          Runtime: go1.x
