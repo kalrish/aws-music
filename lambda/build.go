@@ -20,7 +20,16 @@ func build () (string, error) {
 		},
 	)
 
-	return "Hello ƛ!", nil
+	if err == nil {
+		log.Println("Successfully launched worker instance")
+
+		return "Hello ƛ!", nil
+	} else {
+		log.Println("Could not launch worker instance")
+
+		return "FAIL", err
+	}
+
 }
 
 func main () {
