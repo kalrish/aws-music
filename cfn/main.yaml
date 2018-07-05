@@ -15,9 +15,6 @@ Parameters:
       Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code.'
       Type: String
       Default: 'https://github.com/kalrish/aws-vibes.git'
-   ServerSecurityGroups:
-      Description: 'ID of a security group for server instances allowing access from those endpoints meant to have access to the resources offered by the server.'
-      Type: List<AWS::EC2::SecurityGroup::Id>
    ServerSubnet:
       Description: 'ID of a subnet within the VPC in which to place server instances.'
       Type: AWS::EC2::Subnet::Id
@@ -49,7 +46,6 @@ Metadata:
                - CodeBuildSecurityGroups
                - BuildSecurityGroup
                - WorkerSecurityGroups
-               - ServerSecurityGroups
       ParameterLabels:
          BuildSubnet:
             default: Build subnet
@@ -1179,6 +1175,17 @@ Resources:
                - !Ref WorkerSubnet
             SecurityGroupIds:
                - !GetAtt BuildFunctionSecurityGroup.GroupId
+   ServerSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+         GroupDescription: 'For the server instance to be accessible.'
+         SecurityGroupIngress:
+            -
+               CidrIp: 0.0.0.0/0
+               FromPort: '-1' # 873
+               ToPort: '-1' # 873
+               IpProtocol: '-1' # tcp
+         VpcId: !Ref Vpc
    ServerLaunchTemplate:
       Type: AWS::EC2::LaunchTemplate
       Properties:
@@ -1189,6 +1196,7 @@ Resources:
             NetworkInterfaces:
                -
                   DeviceIndex: 0
-                  Groups: !Ref ServerSecurityGroups
+                  Groups:
+                     - !Ref ServerSecurityGroup
                   SubnetId: !Ref ServerSubnet
                   AssociatePublicIpAddress: true

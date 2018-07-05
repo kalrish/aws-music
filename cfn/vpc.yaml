@@ -18,7 +18,7 @@ Parameters:
       Description: 'IPv4 address block to assign to the VPC in CIDR format.'
       Type: String
       AllowedPattern: '((\d{1,3})\.){3}\d{1,3}/\d{1,2}'
-      Default: '10.0.0.0/27'
+      Default: '10.0.0.0/26'
 Metadata:
    AWS::CloudFormation::Interface:
       ParameterGroups:
@@ -176,12 +176,27 @@ Resources:
       Properties:
          RouteTableId: !Ref PrivateRouteTable
          SubnetId: !Ref PrivateSubnet
+   ProtectedSubnet:
+      Type: 'AWS::EC2::Subnet'
+      Properties:
+         VpcId: !Ref Vpc
+         CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
+   ProtectedRouteTable:
+      Type: 'AWS::EC2::RouteTable'
+      Properties:
+         VpcId: !Ref Vpc
+   ProtectedRouteTableAssociation:
+      Type: 'AWS::EC2::SubnetRouteTableAssociation'
+      Properties:
+         RouteTableId: !Ref ProtectedRouteTable
+         SubnetId: !Ref ProtectedSubnet
    S3Endpoint:
       Type: 'AWS::EC2::VPCEndpoint'
       Properties:
          ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
          RouteTableIds:
             - !Ref PrivateRouteTable
+            - !Ref ProtectedRouteTable
          VpcId: !Ref Vpc
    ServerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
