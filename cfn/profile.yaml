@@ -5,21 +5,37 @@ Parameters:
    Name:
       Description: 'Name of the profile.'
       Type: String
-   Config:
-      Description: 'Tup configuration associated to the profile. A comma-delimited list in which each element represents a line in the tup.config file.'
+   Format:
+      Description: 'Format into which to encode the collection.'
+      Type: String
+   Encoder:
+      Description: 'Encoder program with which to encode the collection.'
+      Type: String
+   ExtraConfig:
+      Description: 'Additional tup configuration associated with the profile. A comma-delimited list in which each element represents a line in the tup.config file.'
       Type: CommaDelimitedList
 Metadata:
    AWS::CloudFormation::Interface:
       ParameterGroups:
          -
             Label:
-               default: Profile
+               default: General
             Parameters:
-               - Config
                - Name
+         -
+            Label:
+               default: Configuration
+            Parameters:
+               - Format
+               - Encoder
+               - ExtraConfig
       ParameterLabels:
-         Config:
-            default: Configuration
+         Encoder:
+            default: Encoder
+         ExtraConfig:
+            default: Extra configuration
+         Format:
+            default: Format
          Name:
             default: Name
 Resources:
@@ -29,4 +45,6 @@ Resources:
          Name: !Sub '/vibes/profiles/${Name}'
          Description: !Sub 'Tup configuration associated with the ${Name} profile.'
          Type: String
-         Value: !Join [ "\n" , [ !Join [ "\n" , !Ref Config ] , '' ] ]
+         Value: !Sub
+            - "CONFIG_FORMAT=${Format}\nCONFIG_ENCODER=${Encoder}\n${extra}\n"
+            - extra: !Join [ "\n" , !Ref ExtraConfig ]

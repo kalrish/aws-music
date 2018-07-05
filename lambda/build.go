@@ -13,22 +13,26 @@ func build () (string, error) {
 
 	rv, err := client.RunInstances(
 		&ec2.RunInstancesInput{
+            InstanceType: aws.String("t2.micro"),
 			LaunchTemplate: &ec2.LaunchTemplateSpecification{
 				LaunchTemplateName: aws.String("vibes-worker"),
 			},
-			MinCount: aws.Int64(1),
 			MaxCount: aws.Int64(1),
+			MinCount: aws.Int64(1),
 		},
 	)
 
 	if err == nil {
 		log.Println("Successfully launched worker instance")
-		log.Println("Worker instance ID: ", *rv.Instances[0].InstanceId)
 
-		client.TerminateInstances(
+        instance_id := *rv.Instances[0].InstanceId
+
+		log.Println("Worker instance ID: ", instance_id)
+
+        rv, err := client.TerminateInstances(
 			&ec2.TerminateInstancesInput{
 				InstanceIds: []*string{
-					*rv.Instances[0].InstanceId,
+					instance_id,
 				},
 			},
 		)
@@ -39,7 +43,6 @@ func build () (string, error) {
 
 		return "FAIL", err
 	}
-
 }
 
 func main () {
