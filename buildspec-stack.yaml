@@ -12,7 +12,7 @@ phases:
          - GOOS=linux GOARCH=amd64 go build -o lambda/build -- lambda/build.go
          - zip -9 lambda/build.zip -- lambda/build
          - cd cfn
-         - aws cloudformation package --template-file main.yaml --output-template-file main-packaged.yaml --s3-bucket "${BUCKET}" --s3-prefix cfn
+         - aws cloudformation package --template-file main.yaml --output-template-file main-packaged.yaml --s3-bucket "${BUCKET}" --s3-prefix main
          - mv -T -- main-packaged.yaml main.yaml
 
 artifacts:
