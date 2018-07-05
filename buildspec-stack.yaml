@@ -1,0 +1,16 @@
+---
+version: 0.2
+
+phases:
+   build:
+      commands:
+         - GOOS=linux GOARCH=amd64 go build -o lambda/build -- lambda/build.go
+         - zip -9 lambda/build.zip -- lambda/build
+         - aws cloudformation package --template-file cfn/main.yaml --output-template-file main.yaml --s3-bucket "${BUCKET}" --s3-prefix artifacts
+         - mv -T -- main.yaml cfn/main.yaml
+
+artifacts:
+   files:
+      - cfn/*.yaml
+      - lambda/*.zip
+   discard-paths: no

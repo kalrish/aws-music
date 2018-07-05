@@ -6,8 +6,8 @@ env:
       INSTANCE_TYPE: 't2.medium'
       VOLUME_NAME: '/dev/xvdf'
    parameter-store:
-      INSTANCE_AMI: '/vibes/ec2/ami/volmgr'
-      PRIVATE_KEY: '/vibes/ec2/keys/build'
+      INSTANCE_AMI: '/vibes/ami/volmgr'
+      PRIVATE_KEY: '/vibes/keys/build'
 
 phases:
    pre_build:

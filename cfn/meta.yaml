@@ -1,5 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Resources required to deploy the CloudFormation stacks, including a CodeBuild project to build the lambda functions and generate the CloudFormation templates and an S3 bucket to upload these artifacts and make them available to the user.'
 Parameters:
    CodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code.'
@@ -19,6 +20,11 @@ Metadata:
 Resources:
    StackBucket:
       Type: AWS::S3::Bucket
+      Properties:
+         Tags:
+            -
+               Key: vibes
+               Value: meta
    BuildRole:
       Type: AWS::IAM::Role
       Properties:
@@ -59,14 +65,14 @@ Resources:
    BuildProject:
       Type: AWS::CodeBuild::Project
       Properties:
-         Name: vibes-meta
+         Name: vibes-stack
          Description: 'Assemble the vibes CloudFormation stack, building and packaging the associated lambda functions.'
          ServiceRole: !GetAtt BuildRole.Arn
          Source:
             Type: GITHUB
             Location: !Ref CodeRepositoryCloneUrlHttp
             GitCloneDepth: 1
-            BuildSpec: 'buildspec-meta.yaml'
+            BuildSpec: 'buildspec-stack.yaml'
          Environment:
             Type: LINUX_CONTAINER
             ComputeType: BUILD_GENERAL1_SMALL
@@ -80,3 +86,7 @@ Resources:
          Artifacts:
             Type: S3
             Location: !Ref StackBucket
+            NamespaceType: NONE
+            Name: ''
+            Path: ''
+            Packaging: NONE

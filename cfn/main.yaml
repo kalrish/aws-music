@@ -1,5 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Resources required to create and maintain a platform suitable for building vibes collections.'
 Parameters:
    BuildSecurityGroup:
       Description: 'ID of a security group for build instances, which require Internet access.'
@@ -105,7 +106,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
                         Effect: Allow
             -
                PolicyName: cloudwatch
@@ -330,7 +331,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
                         Effect: Allow
             -
                PolicyName: ec2
@@ -488,7 +489,7 @@ Resources:
    VolmgrAmiParameter:
       Type: AWS::SSM::Parameter
       Properties:
-         Name: '/vibes/ec2/ami/volmgr'
+         Name: '/vibes/ami/volmgr'
          Type: String
          Description: 'ID of the vibes volume manager AMI.'
          Value: dummy
@@ -568,7 +569,7 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:PutParameter'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
                         Effect: Allow
    VolmgrAmiBuildLogsPolicy:
       Type: AWS::IAM::Policy
@@ -1016,7 +1017,7 @@ Resources:
             Statement:
                -
                   Action: 'ssm:GetParameters'
-                  Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/keys/build'
+                  Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/keys/build'
                   Effect: Allow
          Roles:
             - !Ref BuildsVolumeBuildRole
@@ -1024,13 +1025,6 @@ Resources:
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
-   LambdasBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-         Tags:
-            -
-               Key: vibes
-               Value: lambdas
    BuildFunctionSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
@@ -1096,14 +1090,12 @@ Resources:
                   Statement:
                      -
                         Action: 'ssm:GetParameters'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ec2/ami/volmgr'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
                         Effect: Allow
    BuildFunction:
-      Type: AWS::Lambda::Function
+      Type: AWS::Serverless::Function
       Properties:
-         Code:
-            S3Bucket: !Ref LambdasBucket
-            S3Key: build
+         CodeUri: lambda/build.zip
          Handler: build
          Role: !GetAtt BuildFunctionRole.Arn
          Runtime: go1.x

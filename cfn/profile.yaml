@@ -1,16 +1,31 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Resources representing a tup-vibes profile.'
 Parameters:
-   Profile:
+   Name:
       Description: 'Name of the profile.'
       Type: String
    Config:
       Description: 'Tup configuration associated to the profile. A comma-delimited list in which each element represents a line in the tup.config file.'
       Type: CommaDelimitedList
+Metadata:
+   AWS::CloudFormation::Interface:
+      ParameterGroups:
+         -
+            Label:
+               default: Profile
+            Parameters:
+               - Config
+               - Name
+      ParameterLabels:
+         Config:
+            default: Configuration
+         Name:
+            default: Name
 Resources:
    ConfigParameter:
       Type: 'AWS::SSM::Parameter'
       Properties:
-         Name: !Sub '/vibes/profiles/${Profile}'
+         Name: !Sub '/vibes/profiles/${Name}'
          Type: String
          Value: !Join [ "\n" , [ !Join [ "\n" , !Ref Config ] , '' ] ]
