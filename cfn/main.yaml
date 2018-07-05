@@ -1073,6 +1073,7 @@ Resources:
                - !Ref WorkerSubnet
             SecurityGroupIds:
                - !GetAtt BuildFunctionSecurityGroup.GroupId
+      DependsOn: VpcPolicy
    ServerLaunchTemplate:
       Type: AWS::EC2::LaunchTemplate
       Properties:
