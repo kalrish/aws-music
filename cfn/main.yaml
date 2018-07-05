@@ -563,13 +563,30 @@ Resources:
                         Resource: '*'
                         Effect: Allow
             -
-               PolicyName: parameters
+               PolicyName: parameter
                PolicyDocument:
                   Version: '2012-10-17'
                   Statement:
                      -
                         Action: 'ssm:PutParameter'
                         Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/ami/volmgr'
+                        Effect: Allow
+            -
+               PolicyName: launch-template
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ec2:DescribeLaunchTemplates'
+                        Resource: '*'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:CreateLaunchTemplateVersion'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
+                        Effect: Allow
+                     -
+                        Action: 'ec2:ModifyLaunchTemplate'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:launch-template/${VolmgrLaunchTemplate}'
                         Effect: Allow
    VolmgrAmiBuildLogsPolicy:
       Type: AWS::IAM::Policy
@@ -620,6 +637,10 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
+               -
+                  Name: LAUNCH_TEMPLATE
+                  Type: PLAINTEXT
+                  Value: !Ref VolmgrLaunchTemplate
          VpcConfig:
             VpcId: !Ref Vpc
             Subnets:
@@ -632,6 +653,13 @@ Resources:
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: VpcPolicy
+   WorkerAmiParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+         Name: '/vibes/ami/worker'
+         Type: String
+         Description: 'ID of the vibes worker AMI.'
+         Value: dummy
    WorkerAmiBuildRole:
       Type: AWS::IAM::Role
       Properties:
@@ -704,6 +732,15 @@ Resources:
                      -
                         Action: 'ec2:DescribeVolumes'
                         Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: parameter
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:PutParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WorkerAmiParameter}'
                         Effect: Allow
             -
                PolicyName: launch-template
@@ -825,6 +862,13 @@ Resources:
          Artifacts:
             Type: NO_ARTIFACTS
       DependsOn: VpcPolicy
+   ServerAmiParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+         Name: '/vibes/ami/server'
+         Type: String
+         Description: 'ID of the vibes server AMI.'
+         Value: dummy
    ServerAmiBuildRole:
       Type: AWS::IAM::Role
       Properties:
@@ -893,6 +937,15 @@ Resources:
                      -
                         Action: 'ec2:DescribeVolumes'
                         Resource: '*'
+                        Effect: Allow
+            -
+               PolicyName: parameter
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:PutParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${ServerAmiParameter}'
                         Effect: Allow
             -
                PolicyName: launch-template
@@ -993,6 +1046,23 @@ Resources:
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
+   VolmgrLaunchTemplate:
+      Type: AWS::EC2::LaunchTemplate
+      Properties:
+         LaunchTemplateName: vibes-volmgr
+         LaunchTemplateData:
+            InstanceType: m5.large
+            KeyName: vibes-volmgr
+            NetworkInterfaces:
+               -
+                  DeviceIndex: 0
+                  Groups: !Split
+                     - ','
+                     - !Sub
+                        - '${WorkerInstanceSecurityGroup.GroupId},${list}'
+                        - list: !Join [ ',' , !Ref WorkerSecurityGroups ]
+                  SubnetId: !Ref WorkerSubnet
+                  AssociatePublicIpAddress: false
    BuildFunctionSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
