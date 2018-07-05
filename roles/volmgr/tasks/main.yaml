@@ -10,9 +10,6 @@
   with_items:
      - aws-cli
      - e2fsprogs
-     - f2fs-tools
      - openssh
      - python
-     - tup
-     - xfsprogs
 - import_tasks: vibes-user.yaml
