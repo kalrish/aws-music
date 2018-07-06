@@ -25,11 +25,15 @@ func build() (string, error) {
 			},
 			MaxCount: aws.Int64(1),
 			MinCount: aws.Int64(1),
-			TagSpecifications: []*TagSpecification{
-				ResourceType: aws.String("instance"),
-				Tags: []*Tag{
-					Key: aws.String("Manager"),
-					Value: aws.String("vibes-lambda-build"),
+			TagSpecifications: []*ec2.TagSpecification{
+				{
+					ResourceType: aws.String("instance"),
+					Tags: []*ec2.Tag{
+						{
+							Key: aws.String("Manager"),
+							Value: aws.String("vibes-lambda-build"),
+						},
+					},
 				},
 			},
 		},
