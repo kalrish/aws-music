@@ -1064,7 +1064,6 @@ Resources:
             - !Ref VolmgrAmiBuildRole
             - !Ref WorkerAmiBuildRole
             - !Ref ServerAmiBuildRole
-            - !Ref BuildFunctionRole
    BuildKeyPolicy:
       Type: AWS::IAM::Policy
       Properties:
