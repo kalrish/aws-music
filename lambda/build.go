@@ -128,6 +128,10 @@ func build() (string, error) {
 		return "Hello ƛ!", nil
 	} else {
 		log.Println("Could not launch worker instance")
+		aws_err, ok := err.(awserr.Error)
+		if ok {
+			log.Println(aws_err.Messsage())
+		}
 
 		return "FAIL", err
 	}
