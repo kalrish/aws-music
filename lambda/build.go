@@ -109,6 +109,12 @@ func build() (string, error) {
 						err = ssh_session.Run("ls -l /var/opt/vibes")
 						if err == nil {
 						}
+
+						err = ssh_session.Run("vibes build")
+						if err == nil {
+						}
+
+						// INVOKE snapshot lambda
 					}
 
 					ssh_session.Close()
