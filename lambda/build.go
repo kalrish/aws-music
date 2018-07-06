@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -130,7 +131,7 @@ func build() (string, error) {
 		log.Println("Could not launch worker instance")
 		aws_err, ok := err.(awserr.Error)
 		if ok {
-			log.Println(aws_err.Messsage())
+			log.Println(aws_err.Message())
 		}
 
 		return "FAIL", err
