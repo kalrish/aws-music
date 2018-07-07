@@ -9,9 +9,9 @@ Parameters:
    BuildFunctionSecurityGroups:
       Description: 'IDs of security groups to assign to the build lambda function, which must be able to reach EC2 and SSM.'
       Type: List<AWS::EC2::SecurityGroup::Id>
-   BuildFunctionSubnet:
-      Description: 'ID of a private subnet with Internet access within the VPC in which to place the build lambda function.'
-      Type: AWS::EC2::Subnet::Id
+   BuildFunctionSubnets:
+      Description: 'IDs of private subnets within the VPC in which to place the build lambda function, which must be able to reach EC2 and SSM.'
+      Type: List<AWS::EC2::Subnet::Id>
    BuildSecurityGroup:
       Description: 'ID of a security group for build instances, which require Internet access.'
       Type: AWS::EC2::SecurityGroup::Id
@@ -1235,8 +1235,7 @@ Resources:
          Runtime: go1.x
          Timeout: 300
          VpcConfig:
-            SubnetIds:
-               - !Ref BuildFunctionSubnet
+            SubnetIds: !Ref BuildFunctionSubnets
             SecurityGroupIds:
                - !GetAtt BuildFunctionSecurityGroup.GroupId
             SecurityGroupIds: !Split
