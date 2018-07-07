@@ -1191,6 +1191,13 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-worker'
                         Effect: Allow
                      -
+                        Action: 'ec2:CreateTags'
+                        Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                        Condition:
+                           StringEquals:
+                              ec2:CreateAction: 'RunInstances'
+                        Effect: Allow
+                     -
                         Action: 'iam:PassRole'
                         Resource: !GetAtt WorkerInstanceRole.Arn
                         Effect: Allow
