@@ -1166,6 +1166,7 @@ Resources:
                         Action: 'ssm:GetParameter'
                         Resource:
                            - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WorkerAmiParameter}'
+                           - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/keys/worker'
                         Effect: Allow
             -
                PolicyName: ec2

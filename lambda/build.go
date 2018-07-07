@@ -56,71 +56,73 @@ func build() (string, error) {
 			},
 		)
 
-		ssh_key, err := ssh.ParsePrivateKey([]byte(aws.StringValue(rv_ssm_GetParameter.Parameter.Value)))
-		if err == nil {
-			ssh_config := &ssh.ClientConfig{
-				User: "root",
-				Auth: []ssh.AuthMethod{
-					ssh.PublicKeys(ssh_key),
-				},
-			}
+        if err == nil {
+            ssh_key, err := ssh.ParsePrivateKey([]byte(aws.StringValue(rv_ssm_GetParameter.Parameter.Value)))
+            if err == nil {
+                ssh_config := &ssh.ClientConfig{
+                    User: "root",
+                    Auth: []ssh.AuthMethod{
+                        ssh.PublicKeys(ssh_key),
+                    },
+                }
 
-			err := client_ec2.WaitUntilInstanceRunning(
-				&ec2.DescribeInstancesInput{
-					InstanceIds: []*string{
-						&instance_id,
-					},
-				},
-			)
+                err := client_ec2.WaitUntilInstanceRunning(
+                    &ec2.DescribeInstancesInput{
+                        InstanceIds: []*string{
+                            &instance_id,
+                        },
+                    },
+                )
 
-			instance_ip_address := aws.StringValue(rv_ec2_RunInstances.Instances[0].PrivateIpAddress)
+                instance_ip_address := aws.StringValue(rv_ec2_RunInstances.Instances[0].PrivateIpAddress)
 
-			ssh_port := "22"
+                ssh_port := "22"
 
-			for {
-				connection, _ := net.DialTimeout("tcp", net.JoinHostPort(instance_ip_address, ssh_port), time.Second)
-				if connection != nil {
-					connection.Close()
-					break
-				}
-			}
+                for {
+                    connection, _ := net.DialTimeout("tcp", net.JoinHostPort(instance_ip_address, ssh_port), time.Second)
+                    if connection != nil {
+                        connection.Close()
+                        break
+                    }
+                }
 
-			ssh_connection, err := ssh.Dial("tcp", net.JoinHostPort(instance_ip_address, ssh_port), ssh_config)
-			if err == nil {
-				ssh_session, err := ssh_connection.NewSession()
-				if err == nil {
-					modes := ssh.TerminalModes{
-						ssh.ECHO:          0,
-						ssh.TTY_OP_ISPEED: 14400,
-						ssh.TTY_OP_OSPEED: 14400,
-					}
+                ssh_connection, err := ssh.Dial("tcp", net.JoinHostPort(instance_ip_address, ssh_port), ssh_config)
+                if err == nil {
+                    ssh_session, err := ssh_connection.NewSession()
+                    if err == nil {
+                        modes := ssh.TerminalModes{
+                            ssh.ECHO:          0,
+                            ssh.TTY_OP_ISPEED: 14400,
+                            ssh.TTY_OP_OSPEED: 14400,
+                        }
 
-					err := ssh_session.RequestPty("xterm", 80, 40, modes)
-					if err == nil {
-						stdin, err := ssh_session.StdinPipe()
-						go io.Copy(stdin, os.Stdin)
+                        err := ssh_session.RequestPty("xterm", 80, 40, modes)
+                        if err == nil {
+                            stdin, err := ssh_session.StdinPipe()
+                            go io.Copy(stdin, os.Stdin)
 
-						stdout, err := ssh_session.StdoutPipe()
-						go io.Copy(os.Stdout, stdout)
+                            stdout, err := ssh_session.StdoutPipe()
+                            go io.Copy(os.Stdout, stdout)
 
-						stderr, err := ssh_session.StderrPipe()
-						go io.Copy(os.Stderr, stderr)
+                            stderr, err := ssh_session.StderrPipe()
+                            go io.Copy(os.Stderr, stderr)
 
-						err = ssh_session.Run("ls -l /var/opt/vibes")
-						if err == nil {
-						}
+                            err = ssh_session.Run("ls -l /var/opt/vibes")
+                            if err == nil {
+                            }
 
-						err = ssh_session.Run("vibes build")
-						if err == nil {
-						}
+                            err = ssh_session.Run("vibes build")
+                            if err == nil {
+                            }
 
-						// INVOKE snapshot lambda
-					}
+                            // INVOKE snapshot lambda
+                        }
 
-					ssh_session.Close()
-				}
-			}
-		}
+                        ssh_session.Close()
+                    }
+                }
+            }
+        }
 
 		rv_ec2_TerminateInstances, err := client_ec2.TerminateInstances(
 			&ec2.TerminateInstancesInput{
