@@ -6,6 +6,9 @@ Parameters:
       Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code. Override the default if you want to try out code in a fork.'
       Type: String
       Default: 'https://github.com/kalrish/aws-vibes.git'
+   BuildFunctionSecurityGroups:
+      Description: 'IDs of security groups to assign to the build lambda function, which must be able to reach EC2 and SSM.'
+      Type: List<AWS::EC2::SecurityGroup::Id>
    BuildSecurityGroup:
       Description: 'ID of a security group for build instances, which require Internet access.'
       Type: AWS::EC2::SecurityGroup::Id
@@ -1237,6 +1240,11 @@ Resources:
                - !Ref WorkerSubnet
             SecurityGroupIds:
                - !GetAtt BuildFunctionSecurityGroup.GroupId
+            SecurityGroupIds: !Split
+               - ','
+               - !Sub
+                  - '${BuildFunctionSecurityGroup.GroupId},${list}'
+                  - list: !Join [ ',' , !Ref BuildFunctionSecurityGroups ]
    ServerSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:

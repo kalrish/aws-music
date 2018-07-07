@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'VPC to sustain a platform suitable for building and hosting vibes collections.'
+Description: 'VPC to host a platform suitable for building and hosting vibes collections.'
 Parameters:
    NatInstanceImageId:
       Description: 'ID of the AMI on which to base the NAT instance.'
@@ -13,7 +13,13 @@ Parameters:
       Type: String
       Default: t2.medium
    PrivateSubnetAvailabilityZone:
-      Description: 'Availability zone in which to create the private subnet. It must support CodeBuild.'
+      Description: 'Availability zone in which to create the private subnet. It must support CodeBuild and lambda functions.'
+      Type: 'AWS::EC2::AvailabilityZone::Name'
+   ProtectedSubnetAvailabilityZone:
+      Description: 'Availability zone in which to create the protected subnet.'
+      Type: 'AWS::EC2::AvailabilityZone::Name'
+   PublicSubnetAvailabilityZone:
+      Description: 'Availability zone in which to create the public subnet. EC2 must have capacity to create the NAT instance in it.'
       Type: 'AWS::EC2::AvailabilityZone::Name'
    VpcIpv4AddressBlock:
       Description: 'IPv4 address block to assign to the VPC in CIDR format.'
@@ -28,6 +34,8 @@ Metadata:
                default: VPC configuration
             Parameters:
                - PrivateSubnetAvailabilityZone
+               - ProtectedSubnetAvailabilityZone
+               - PublicSubnetAvailabilityZone
                - VpcIpv4AddressBlock
          -
             Label:
@@ -45,6 +53,10 @@ Metadata:
             default: Instance type
          PrivateSubnetAvailabilityZone:
             default: Private subnet availability zone
+         ProtectedSubnetAvailabilityZone:
+            default: Protected subnet availability zone
+         PublicSubnetAvailabilityZone:
+            default: Public subnet availability zone
          VpcIpv4AddressBlock:
             default: IPv4 address block
 Resources:
@@ -63,8 +75,13 @@ Resources:
       Type: 'AWS::EC2::Subnet'
       Properties:
          VpcId: !Ref Vpc
-         CidrBlock: !Select [ 1 , !Cidr [ !GetAtt Vpc.CidrBlock , 3 , 4 ] ]
+         CidrBlock: !Select [ 2 , !Cidr [ !GetAtt Vpc.CidrBlock , 3 , 4 ] ]
          MapPublicIpOnLaunch: true
+         AvailabilityZone: !Ref PublicSubnetAvailabilityZone
+         Tags:
+            -
+               Key: Name
+               Value: vibes-public
    PublicRouteTable:
       Type: 'AWS::EC2::RouteTable'
       Properties:
@@ -114,12 +131,12 @@ Resources:
    NatSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'For instances on private subnets to access the NAT instance.'
+         GroupDescription: 'Instances in the private subnets, which must be able to access the NAT instance in order to initiate network connections outside of the VPC.'
          VpcId: !Ref Vpc
    NatInstanceSecurityGroup:
       Type: 'AWS::EC2::SecurityGroup'
       Properties:
-         GroupDescription: 'For the NAT instance itself.'
+         GroupDescription: 'NAT instance, to which instances residing in the private subnet must be allowed access.'
          SecurityGroupIngress:
             -
                SourceSecurityGroupId: !GetAtt NatSecurityGroup.GroupId
@@ -162,6 +179,10 @@ Resources:
          VpcId: !Ref Vpc
          CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
          AvailabilityZone: !Ref PrivateSubnetAvailabilityZone
+         Tags:
+            -
+               Key: Name
+               Value: vibes-private
    PrivateRouteTable:
       Type: 'AWS::EC2::RouteTable'
       Properties:
@@ -181,7 +202,12 @@ Resources:
       Type: 'AWS::EC2::Subnet'
       Properties:
          VpcId: !Ref Vpc
-         CidrBlock: !Select [ 2, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
+         CidrBlock: !Select [ 1, !Cidr [ !GetAtt Vpc.CidrBlock, 3, 4 ] ]
+         AvailabilityZone: !Ref ProtectedSubnetAvailabilityZone
+         Tags:
+            -
+               Key: Name
+               Value: vibes-protected
    ProtectedRouteTable:
       Type: 'AWS::EC2::RouteTable'
       Properties:
@@ -198,4 +224,5 @@ Resources:
          RouteTableIds:
             - !Ref PrivateRouteTable
             - !Ref ProtectedRouteTable
+            - !Ref PublicRouteTable
          VpcId: !Ref Vpc
