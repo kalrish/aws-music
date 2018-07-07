@@ -784,36 +784,6 @@ Resources:
                   Effect: Allow
          Roles:
             - !Ref WorkerAmiBuildRole
-   WorkerInstanceRole:
-      Type: AWS::IAM::Role
-      Properties:
-         AssumeRolePolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-               -
-                  Principal:
-                     Service: ec2.amazonaws.com
-                  Action: 'sts:AssumeRole'
-                  Effect: Allow
-         Policies:
-            -
-               PolicyName: profiles
-               PolicyDocument:
-                  Version: '2012-10-17'
-                  Statement:
-                     -
-                        Action: 'ssm:GetParametersByPath'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles'
-                        Effect: Allow
-                     -
-                        Action: 'ssm:GetParameter'
-                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
-                        Effect: Allow
-   WorkerInstanceProfile:
-      Type: AWS::IAM::InstanceProfile
-      Properties:
-         Roles:
-            - !Ref WorkerInstanceRole
    WorkerAmiBuildProject:
       Type: AWS::CodeBuild::Project
       Properties:
@@ -847,10 +817,6 @@ Resources:
                   Name: INSTANCE_SECURITY_GROUPS
                   Type: PLAINTEXT
                   Value: !Sub '${BuildSecurityGroup},${BuildInstanceSecurityGroup.GroupId}'
-               -
-                  Name: INSTANCE_PROFILE
-                  Type: PLAINTEXT
-                  Value: !Ref WorkerInstanceProfile
                -
                   Name: CODE_REPOSITORY
                   Type: PLAINTEXT
@@ -1120,6 +1086,36 @@ Resources:
                ToPort: 22
                IpProtocol: tcp
          VpcId: !Ref Vpc
+   WorkerInstanceRole:
+      Type: AWS::IAM::Role
+      Properties:
+         AssumeRolePolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+               -
+                  Principal:
+                     Service: ec2.amazonaws.com
+                  Action: 'sts:AssumeRole'
+                  Effect: Allow
+         Policies:
+            -
+               PolicyName: profiles
+               PolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                     -
+                        Action: 'ssm:GetParametersByPath'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles'
+                        Effect: Allow
+                     -
+                        Action: 'ssm:GetParameter'
+                        Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vibes/profiles/*'
+                        Effect: Allow
+   WorkerInstanceProfile:
+      Type: AWS::IAM::InstanceProfile
+      Properties:
+         Roles:
+            - !Ref WorkerInstanceRole
    WorkerLaunchTemplate:
       Type: AWS::EC2::LaunchTemplate
       Properties:
@@ -1197,6 +1193,13 @@ Resources:
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:volume/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}::image/*'
                            - !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:key-pair/vibes-worker'
+                        Effect: Allow
+                     -
+                        Action: 'iam:PassRole'
+                        Resource: !GetAtt WorkerInstanceRole.Arn
+                        Condition:
+                           StringEquals:
+                              aws:Region: !Ref 'AWS::Region'
                         Effect: Allow
                      -
                         Action:
