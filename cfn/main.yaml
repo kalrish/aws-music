@@ -1142,7 +1142,11 @@ Resources:
                         - list: !Join [ ',' , !Ref WorkerSecurityGroups ]
                   SubnetId: !Ref WorkerSubnet
                   AssociatePublicIpAddress: false
-            InstanceInitiatedShutdownBehavior: terminate
+            InstanceInitiatedShutdownBehavior: stop
+            Tags:
+               -
+                  Key: Name
+                  Value: vibes worker
    BuildFunctionRole:
       Type: AWS::IAM::Role
       Properties:

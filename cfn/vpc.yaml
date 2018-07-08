@@ -159,6 +159,10 @@ Resources:
                SubnetId: !Ref PublicSubnet
                AssociatePublicIpAddress: true
          SourceDestCheck: false
+         Tags:
+            -
+               Key: Name
+               Value: vibes NAT
       DependsOn: InternetGatewayAttachment
    BridgeInstanceLaunchTemplate:
       Type: 'AWS::EC2::LaunchTemplate'
