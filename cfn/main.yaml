@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Resources required to create and maintain a platform suitable for building vibes collections.'
+Description: 'Platform suitable for building vibes collections.'
 Parameters:
    AwsCodeRepositoryCloneUrlHttp:
       Description: 'HTTP clone URL of the GitHub repository containing the aws-vibes code. Override the default if you want to try out code in a fork.'

@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Resources representing a tup-vibes profile.'
+Description: 'A tup-vibes profile.'
 Parameters:
    Name:
       Description: 'Name of the profile.'
