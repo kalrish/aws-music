@@ -1245,7 +1245,7 @@ Resources:
       Type: AWS::Lambda::Function
       Properties:
          Code: ../lambda/build.zip
-         Handler: build
+         Handler: build.exe
          Role: !GetAtt BuildFunctionRole.Arn
          Runtime: go1.x
          Timeout: 300

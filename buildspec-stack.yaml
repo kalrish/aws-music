@@ -9,14 +9,28 @@ phases:
    build:
       commands:
          - env
-         - GOOS=linux GOARCH=amd64 go build -x -ldflags '-s -w' -o build -- build.go
-         - zip -9 build.zip -- build
+         - |
+            for lambda in *.py
+            do
+                zip -9 "${lambda%.py}.zip" -- "${lambda}"
+            done
+         - |
+            for lambda in *.go
+            do
+                output="${lambda%.go}.exe"
+                GOOS=linux GOARCH=amd64 go build -x -ldflags '-s -w' -o "${output}" -- "${lambda}"
+                zip -9 "${lambda%.go}.zip" -- "${output}"
+            done
          - cd ../cfn
-         - aws cloudformation package --template-file main.yaml --output-template-file main-packaged.yaml --s3-bucket "${BUCKET}" --s3-prefix lambda/main
-         - mv -T -- main-packaged.yaml main.yaml
+         - mkdir pkg
+         - |
+            for template in *.yaml
+            do
+                aws cloudformation package --template-file "${template}" --output-template-file "pkg/${template}" --s3-bucket "${BUCKET}" --s3-prefix artifacts
+            done
 
 artifacts:
-   base-directory: cfn
+   base-directory: cfn/pkg
    files:
       - '*.yaml'
-   discard-paths: no
+   discard-paths: yes

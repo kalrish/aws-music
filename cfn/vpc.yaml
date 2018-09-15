@@ -46,7 +46,7 @@ Metadata:
                - NatInstanceType
       ParameterLabels:
          NatInstanceImageId:
-            default: AMI
+            default: AMI ID
          NatInstanceKeyName:
             default: Keypair name
          NatInstanceType:
